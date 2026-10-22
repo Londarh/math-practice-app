@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { parsePracticeConfig } from './validation'
+import type { Question } from '../types/question'
+import { parsePracticeConfig, validateQuestion } from './validation'
 
 describe('parsePracticeConfig', () => {
   it('accepts a valid config and orders operations consistently', () => {
@@ -57,5 +58,91 @@ describe('parsePracticeConfig', () => {
     ],
   ])('rejects %s', (_label, value) => {
     expect(parsePracticeConfig(value)).toBeNull()
+  })
+})
+
+function makeQuestion(overrides: Partial<Question>): Question {
+  return {
+    id: 'question-test',
+    operation: 'multiplication',
+    firstOperand: 7,
+    secondOperand: 8,
+    displayText: '7 × 8 = ?',
+    correctAnswer: 56,
+    choices: [56],
+    difficulty: 2,
+    source: 'regular',
+    ...overrides,
+  }
+}
+
+describe('validateQuestion', () => {
+  it('accepts a correct question', () => {
+    expect(validateQuestion(makeQuestion({}))).toEqual([])
+  })
+
+  it('rejects unsupported operations', () => {
+    expect(
+      validateQuestion(
+        makeQuestion({ operation: 'modulo' as Question['operation'] }),
+      ),
+    ).toHaveLength(1)
+  })
+
+  it('rejects division by zero', () => {
+    const errors = validateQuestion(
+      makeQuestion({
+        operation: 'division',
+        firstOperand: 8,
+        secondOperand: 0,
+        correctAnswer: NaN,
+      }),
+    )
+    expect(errors).toContain('Division by zero')
+  })
+
+  it('rejects division with a fractional answer', () => {
+    const errors = validateQuestion(
+      makeQuestion({
+        operation: 'division',
+        firstOperand: 7,
+        secondOperand: 2,
+        correctAnswer: 3.5,
+      }),
+    )
+    expect(errors.join()).toMatch(/whole number/)
+  })
+
+  it('rejects a wrong answer', () => {
+    expect(validateQuestion(makeQuestion({ correctAnswer: 54 }))).toHaveLength(
+      1,
+    )
+  })
+
+  it('rejects numbers outside the level', () => {
+    const errors = validateQuestion(
+      makeQuestion({ firstOperand: 12, correctAnswer: 96, difficulty: 2 }),
+    )
+    expect(errors.join()).toMatch(/does not match level 2/)
+  })
+
+  it('rejects negative subtraction unless allowed at level 4', () => {
+    const negative = makeQuestion({
+      operation: 'subtraction',
+      firstOperand: 20,
+      secondOperand: 50,
+      correctAnswer: -30,
+      difficulty: 4,
+    })
+    expect(validateQuestion(negative)).not.toEqual([])
+    expect(
+      validateQuestion(negative, { allowNegativeSubtraction: true }),
+    ).toEqual([])
+    expect(
+      validateQuestion(
+        { ...negative, difficulty: 3 },
+        { allowNegativeSubtraction: true },
+      ),
+    ).not.toEqual([])
   })
 })

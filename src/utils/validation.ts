@@ -1,10 +1,16 @@
-import type { DifficultyLevel, MathOperation } from '../types/question'
+import { matchesDifficulty } from '../services/difficultyRules'
+import type {
+  DifficultyLevel,
+  MathOperation,
+  Question,
+} from '../types/question'
 import type {
   PracticeConfig,
   ReviewItem,
   SessionLength,
 } from '../types/session'
 import { ALL_DIFFICULTIES, ALL_OPERATIONS } from './labels'
+import { computeAnswer } from './math'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -69,4 +75,50 @@ export function parsePracticeConfig(value: unknown): PracticeConfig | null {
   }
 
   return config
+}
+
+export interface QuestionValidationOptions {
+  allowNegativeSubtraction?: boolean
+}
+
+/**
+ * Checks a question against the validation rules in spec section 18.
+ * Returns a list of problems; an empty list means the question is valid.
+ */
+export function validateQuestion(
+  question: Question,
+  options: QuestionValidationOptions = {},
+): string[] {
+  const errors: string[] = []
+  const { operation, firstOperand, secondOperand, correctAnswer, difficulty } =
+    question
+
+  if (!isMathOperation(operation)) {
+    return [`Unsupported operation: ${String(operation)}`]
+  }
+  if (!isDifficultyLevel(difficulty)) {
+    return [`Unsupported difficulty: ${String(difficulty)}`]
+  }
+  if (operation === 'division' && secondOperand === 0) {
+    errors.push('Division by zero')
+  }
+  if (!Number.isInteger(correctAnswer)) {
+    errors.push(`Answer is not a whole number: ${correctAnswer}`)
+  } else if (
+    correctAnswer !== computeAnswer(operation, firstOperand, secondOperand)
+  ) {
+    errors.push(`Answer ${correctAnswer} is wrong for ${question.displayText}`)
+  }
+  if (
+    !matchesDifficulty(
+      operation,
+      difficulty,
+      firstOperand,
+      secondOperand,
+      options.allowNegativeSubtraction,
+    )
+  ) {
+    errors.push(`${question.displayText} does not match level ${difficulty}`)
+  }
+  return errors
 }

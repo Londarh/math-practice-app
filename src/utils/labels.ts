@@ -51,3 +51,26 @@ export const DIFFICULTY_DESCRIPTIONS: Record<DifficultyLevel, string> = {
 export function sessionLengthLabel(length: SessionLength): string {
   return length === 'continuous' ? 'Continuous' : `${length} questions`
 }
+
+/** Formats numbers with thousands separators, e.g. 1000 → "1,000". */
+export function formatNumber(value: number): string {
+  return value.toLocaleString('en-US')
+}
+
+/** The question as shown on the card, e.g. "7 × 8 = ?". */
+export function formatQuestionText(
+  operation: MathOperation,
+  first: number,
+  second: number,
+): string {
+  return `${formatNumber(first)} ${OPERATION_SYMBOLS[operation]} ${formatNumber(second)} = ?`
+}
+
+/** The question in words for screen readers, e.g. "7 times 8 equals what?". */
+export function spokenQuestionText(
+  operation: MathOperation,
+  first: number,
+  second: number,
+): string {
+  return `${formatNumber(first)} ${OPERATION_WORDS[operation]} ${formatNumber(second)} equals what?`
+}
