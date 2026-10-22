@@ -8,9 +8,9 @@ import { ProgressBar } from '../components/practice/ProgressBar'
 import { QuestionCard } from '../components/practice/QuestionCard'
 import { useAppData } from '../hooks/useAppData'
 import { usePracticeSession } from '../hooks/usePracticeSession'
-import { DEFAULT_SETTINGS } from '../services/defaultSettings'
 import type { PracticeConfig, SessionResult } from '../types/session'
 import { DIFFICULTY_LABELS, OPERATION_LABELS } from '../utils/labels'
+import { playResultSound } from '../utils/sound'
 import { parsePracticeConfig } from '../utils/validation'
 import type { PracticeSetupLocationState } from './PracticeSetupPage'
 import './PracticePage.css'
@@ -48,10 +48,9 @@ function PracticeSession({ config }: { config: PracticeConfig }) {
     recordResult,
     endSession,
   } = usePracticeSession(config)
-  const { recordSessionProgress } = useAppData()
+  const { recordSessionProgress, settings } = useAppData()
   const [confirmingEnd, setConfirmingEnd] = useState(false)
   const isReview = Boolean(config.reviewItems)
-  const settings = DEFAULT_SETTINGS
 
   // Save every answer as soon as it is given, so a closed tab loses nothing.
   useEffect(() => {
@@ -111,7 +110,10 @@ function PracticeSession({ config }: { config: PracticeConfig }) {
           question={currentQuestion}
           questionNumber={currentQuestionIndex + 1}
           totalQuestions={totalQuestions}
-          onResult={recordResult}
+          onResult={(selectedAnswer, correct) => {
+            if (settings.soundEnabled) playResultSound(correct)
+            recordResult(selectedAnswer, correct)
+          }}
           animate={settings.cardAnimationEnabled}
           showExplanation={settings.showExplanations}
         />

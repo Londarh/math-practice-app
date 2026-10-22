@@ -9,9 +9,19 @@ import { OptionCard } from './OptionCard'
 interface OperationSelectorProps {
   value: MathOperation[]
   onChange: (operations: MathOperation[]) => void
+  legend?: string
+  hint?: string
+  /** Greys out the whole group, e.g. when mistake review picks the options. */
+  disabled?: boolean
 }
 
-export function OperationSelector({ value, onChange }: OperationSelectorProps) {
+export function OperationSelector({
+  value,
+  onChange,
+  legend = '1. Pick your operations',
+  hint = 'Choose one or more.',
+  disabled = false,
+}: OperationSelectorProps) {
   const allSelected = ALL_OPERATIONS.every((op) => value.includes(op))
 
   function toggle(operation: MathOperation) {
@@ -23,9 +33,9 @@ export function OperationSelector({ value, onChange }: OperationSelectorProps) {
   }
 
   return (
-    <fieldset className="setup-group">
-      <legend className="setup-group__legend">1. Pick your operations</legend>
-      <p className="setup-group__hint">Choose one or more.</p>
+    <fieldset className="setup-group" disabled={disabled}>
+      <legend className="setup-group__legend">{legend}</legend>
+      <p className="setup-group__hint">{hint}</p>
       <div className="setup-group__options">
         {ALL_OPERATIONS.map((operation) => (
           <OptionCard

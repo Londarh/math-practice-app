@@ -5,7 +5,7 @@ import { PageContainer } from '../components/layout/PageContainer'
 import { DifficultySelector } from '../components/practice/DifficultySelector'
 import { OperationSelector } from '../components/practice/OperationSelector'
 import { SessionLengthSelector } from '../components/practice/SessionLengthSelector'
-import { DEFAULT_SETTINGS } from '../services/defaultSettings'
+import { useAppData } from '../hooks/useAppData'
 import type { DifficultyLevel, MathOperation } from '../types/question'
 import type { PracticeConfig, SessionLength } from '../types/session'
 import { parsePracticeConfig } from '../utils/validation'
@@ -23,15 +23,16 @@ export function PracticeSetupPage() {
   const location = useLocation()
   const locationState = (location.state ?? {}) as PracticeSetupLocationState
   const initial = parsePracticeConfig(locationState.config)
+  const { settings } = useAppData()
 
   const [operations, setOperations] = useState<MathOperation[]>(
-    initial?.operations ?? DEFAULT_SETTINGS.defaultOperations,
+    initial?.operations ?? settings.defaultOperations,
   )
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(
-    initial?.difficulty ?? DEFAULT_SETTINGS.defaultDifficulty,
+    initial?.difficulty ?? settings.defaultDifficulty,
   )
   const [sessionLength, setSessionLength] = useState<SessionLength>(
-    initial?.sessionLength ?? DEFAULT_SETTINGS.defaultSessionLength,
+    initial?.sessionLength ?? settings.defaultSessionLength,
   )
 
   const canStart = operations.length > 0

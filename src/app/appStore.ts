@@ -5,6 +5,7 @@ import {
   emptyStatistics,
 } from '../services/statisticsService'
 import {
+  clearAllStoredData,
   getStorage,
   migrateStorage,
   readSection,
@@ -168,6 +169,20 @@ export function resetStatistics(data: AppData): AppData {
   }
 }
 
+/** Applies a settings change; invalid values are ignored field by field. */
+export function updateSettings(
+  data: AppData,
+  changes: Partial<AppSettings>,
+): AppData {
+  const settings = parseSettings({ ...data.settings, ...changes })
+  if (!settings) return data
+  const same = (Object.keys(settings) as (keyof AppSettings)[]).every(
+    (key) =>
+      JSON.stringify(settings[key]) === JSON.stringify(data.settings[key]),
+  )
+  return same ? data : { ...data, settings }
+}
+
 export interface AppStore {
   getState: () => AppState
   subscribe: (listener: () => void) => () => void
@@ -176,6 +191,9 @@ export interface AppStore {
     attempts: readonly PracticeAttempt[],
   ) => void
   resetStatistics: () => void
+  updateSettings: (changes: Partial<AppSettings>) => void
+  /** Erases everything and goes back to the defaults of a first visit. */
+  clearAllData: () => void
   dismissStorageWarning: () => void
 }
 
@@ -227,6 +245,14 @@ export function createAppStore(
     },
     resetStatistics() {
       commit(resetStatistics(state))
+    },
+    updateSettings(changes) {
+      commit(updateSettings(state, changes))
+    },
+    clearAllData() {
+      clearAllStoredData(storage)
+      migrateStorage(storage)
+      commit(defaultAppData())
     },
     dismissStorageWarning() {
       dismissedWarning = state.storageWarning

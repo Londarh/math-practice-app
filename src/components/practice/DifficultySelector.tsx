@@ -16,16 +16,23 @@ const levelIcons: Record<DifficultyLevel, string> = {
 interface DifficultySelectorProps {
   value: DifficultyLevel
   onChange: (difficulty: DifficultyLevel) => void
+  legend?: string
+  hint?: string
+  /** Greys out the whole group, e.g. when mistake review picks the options. */
+  disabled?: boolean
 }
 
 export function DifficultySelector({
   value,
   onChange,
+  legend = '2. Pick a level',
+  hint = 'Start easy and level up!',
+  disabled = false,
 }: DifficultySelectorProps) {
   return (
-    <fieldset className="setup-group">
-      <legend className="setup-group__legend">2. Pick a level</legend>
-      <p className="setup-group__hint">Start easy and level up!</p>
+    <fieldset className="setup-group" disabled={disabled}>
+      <legend className="setup-group__legend">{legend}</legend>
+      <p className="setup-group__hint">{hint}</p>
       <div className="setup-group__options setup-group__options--wide">
         {ALL_DIFFICULTIES.map((level) => (
           <OptionCard

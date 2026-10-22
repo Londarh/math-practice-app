@@ -13,6 +13,7 @@ import {
   recordSessionProgress,
   resetStatistics,
   STORAGE_MESSAGES,
+  updateSettings,
 } from './appStore'
 
 describe('loadAppData', () => {
@@ -260,5 +261,54 @@ describe('statistics in the store', () => {
     expect(reset.sessions).toEqual([])
     expect(reset.statistics.attempted).toBe(0)
     expect(reset.settings.defaultDifficulty).toBe(3)
+  })
+})
+
+describe('settings in the store', () => {
+  it('applies valid changes and ignores invalid ones', () => {
+    const data = defaultAppData()
+
+    const next = updateSettings(data, {
+      defaultDifficulty: 2,
+      masteryThreshold: 0,
+    })
+
+    expect(next.settings.defaultDifficulty).toBe(2)
+    expect(next.settings.masteryThreshold).toBe(
+      DEFAULT_SETTINGS.masteryThreshold,
+    )
+  })
+
+  it('returns the same data when nothing changes', () => {
+    const data = defaultAppData()
+
+    expect(updateSettings(data, { defaultDifficulty: 1 })).toBe(data)
+  })
+
+  it('persists settings so they load on the next start', () => {
+    const storage = new FakeStorage()
+    createAppStore(storage).updateSettings({ cardAnimationEnabled: false })
+
+    expect(
+      createAppStore(storage).getState().settings.cardAnimationEnabled,
+    ).toBe(false)
+  })
+
+  it('clear all data restores every default', () => {
+    const storage = new FakeStorage({ 'other.key': 'x' })
+    const store = createAppStore(storage)
+    store.updateSettings({ defaultDifficulty: 4 })
+    store.recordSessionProgress(makeSession(), [makeAttempt()])
+
+    store.clearAllData()
+
+    const { storageWarning, ...data } = store.getState()
+    expect(data).toEqual(defaultAppData())
+    expect(storageWarning).toBeNull()
+    expect(createAppStore(storage).getState().settings).toEqual(
+      DEFAULT_SETTINGS,
+    )
+    expect(storage.json(STORAGE_KEYS.version)).toEqual({ version: 1 })
+    expect(storage.getItem('other.key')).toBe('x')
   })
 })

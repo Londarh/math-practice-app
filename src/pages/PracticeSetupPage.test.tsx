@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { describe, expect, it } from 'vitest'
+import { AppProvider } from '../app/AppProvider'
+import { STORAGE_KEYS } from '../services/storageService'
 import { PracticeSetupPage } from './PracticeSetupPage'
 
 /** Stands in for the session page and shows the config it received. */
@@ -14,12 +16,14 @@ function renderSetup(state?: unknown) {
   return {
     user: userEvent.setup(),
     ...render(
-      <MemoryRouter initialEntries={[{ pathname: '/practice/setup', state }]}>
-        <Routes>
-          <Route path="/practice/setup" element={<PracticeSetupPage />} />
-          <Route path="/practice/session" element={<SessionProbe />} />
-        </Routes>
-      </MemoryRouter>,
+      <AppProvider>
+        <MemoryRouter initialEntries={[{ pathname: '/practice/setup', state }]}>
+          <Routes>
+            <Route path="/practice/setup" element={<PracticeSetupPage />} />
+            <Route path="/practice/session" element={<SessionProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </AppProvider>,
     ),
   }
 }
@@ -146,5 +150,41 @@ describe('PracticeSetupPage', () => {
     expect(screen.getByRole('checkbox', { name: 'Addition' })).not.toBeChecked()
     expect(screen.getByRole('radio', { name: /Easy/ })).toBeChecked()
     expect(screen.getByRole('radio', { name: '20 questions' })).toBeChecked()
+  })
+
+  it('pre-fills the defaults saved on the settings page', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({
+        defaultOperations: ['subtraction', 'division'],
+        defaultDifficulty: 3,
+        defaultSessionLength: 'continuous',
+      }),
+    )
+    renderSetup()
+
+    expect(screen.getByRole('checkbox', { name: 'Subtraction' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Division' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Addition' })).not.toBeChecked()
+    expect(screen.getByRole('radio', { name: /Intermediate/ })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Continuous' })).toBeChecked()
+  })
+
+  it('lets saved defaults be changed for one session', async () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({ defaultDifficulty: 3, defaultSessionLength: 20 }),
+    )
+    const { user } = renderSetup()
+
+    await user.click(screen.getByRole('radio', { name: /Beginner/ }))
+    await user.click(screen.getByRole('button', { name: 'Start Session' }))
+
+    expect(
+      JSON.parse(screen.getByTestId('received').textContent!).config,
+    ).toMatchObject({ difficulty: 1, sessionLength: 20 })
+    expect(
+      JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!),
+    ).toMatchObject({ defaultDifficulty: 3 })
   })
 })

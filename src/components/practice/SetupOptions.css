@@ -130,3 +130,16 @@
 .setup-group__all {
   margin-top: var(--space-md);
 }
+
+.setup-group:disabled {
+  opacity: 0.55;
+}
+
+.setup-group:disabled .option-card {
+  cursor: not-allowed;
+}
+
+.setup-group:disabled .option-card:hover .option-card__body {
+  border-color: var(--color-border);
+  transform: none;
+}

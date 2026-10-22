@@ -10,6 +10,8 @@ export function useAppData() {
     ...state,
     recordSessionProgress: store.recordSessionProgress,
     resetStatistics: store.resetStatistics,
+    updateSettings: store.updateSettings,
+    clearAllData: store.clearAllData,
     dismissStorageWarning: store.dismissStorageWarning,
   }
 }

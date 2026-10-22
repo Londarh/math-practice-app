@@ -188,4 +188,24 @@ describe('PracticePage', () => {
     expect(sessions[0]).toMatchObject({ attempted: 1, incorrect: 1 })
     expect(sessions[0].completedAt).toBeUndefined()
   })
+
+  it('follows the saved show-explanations setting', async () => {
+    localStorage.setItem(
+      'mathPractice.settings',
+      JSON.stringify({ showExplanations: false }),
+    )
+    const { user } = startSession({
+      operations: ['addition'],
+      difficulty: 1,
+      sessionLength: 5,
+    })
+
+    const choices = within(
+      screen.getByRole('group', { name: 'Answer choices' }),
+    )
+    await user.click(choices.getAllByRole('button')[0])
+    await user.click(screen.getByRole('button', { name: 'Flip Card' }))
+
+    expect(screen.queryByText(/Check it backwards/)).not.toBeInTheDocument()
+  })
 })
