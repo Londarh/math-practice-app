@@ -4,12 +4,12 @@
 
 ### 1. Create the React Project
 
-- [ ] Create a new React project using Vite.
-- [ ] Configure TypeScript.
-- [ ] Install project dependencies.
-- [ ] Confirm that the development server runs.
-- [ ] Remove the default Vite demonstration content.
-- [ ] Create the initial application folder structure.
+- [x] Create a new React project using Vite.
+- [x] Configure TypeScript.
+- [x] Install project dependencies.
+- [x] Confirm that the development server runs.
+- [x] Remove the default Vite demonstration content.
+- [x] Create the initial application folder structure.
 
 Suggested command:
 
@@ -22,24 +22,24 @@ npm run dev
 
 ### 2. Configure Development Tools
 
-- [ ] Configure ESLint.
-- [ ] Configure Prettier.
-- [ ] Add scripts for linting and formatting.
-- [ ] Install Vitest.
-- [ ] Install React Testing Library.
-- [ ] Create one basic component test.
-- [ ] Confirm that tests run successfully.
+- [x] Configure ESLint.
+- [x] Configure Prettier.
+- [x] Add scripts for linting and formatting.
+- [x] Install Vitest.
+- [x] Install React Testing Library.
+- [x] Create one basic component test.
+- [x] Confirm that tests run successfully.
 
 ### 3. Define Shared TypeScript Types
 
-- [ ] Create the `MathOperation` type.
-- [ ] Create the `DifficultyLevel` type.
-- [ ] Create the `Question` interface.
-- [ ] Create the `PracticeAttempt` interface.
-- [ ] Create the `PracticeSession` interface.
-- [ ] Create the `MistakePattern` interface.
-- [ ] Create the statistics interfaces.
-- [ ] Create the application settings interface.
+- [x] Create the `MathOperation` type.
+- [x] Create the `DifficultyLevel` type.
+- [x] Create the `Question` interface.
+- [x] Create the `PracticeAttempt` interface.
+- [x] Create the `PracticeSession` interface.
+- [x] Create the `MistakePattern` interface.
+- [x] Create the statistics interfaces.
+- [x] Create the application settings interface.
 
 Suggested files:
 

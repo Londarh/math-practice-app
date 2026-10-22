@@ -1,0 +1,8 @@
+dist
+coverage
+node_modules
+package-lock.json
+# Project documents are maintained by hand
+specification.md
+TODO.md
+CLAUDE.md
