@@ -1,3 +1,4 @@
+import type { MistakePattern } from '../types/mistake'
 import type { PracticeAttempt, PracticeSession } from '../types/session'
 
 let counter = 0
@@ -35,6 +36,25 @@ export function makeSession(
     attempted: 1,
     correct: 1,
     incorrect: 0,
+    ...overrides,
+  }
+}
+
+export function makePattern(
+  overrides: Partial<MistakePattern> = {},
+): MistakePattern {
+  counter += 1
+  return {
+    id: `mistake-${counter}`,
+    operation: 'multiplication',
+    firstOperand: 8,
+    secondOperand: 7,
+    correctAnswer: 56,
+    difficulty: 2,
+    incorrectCount: 1,
+    similarCorrectCount: 0,
+    lastIncorrectAt: '2026-10-20T10:00:00.000Z',
+    mastered: false,
     ...overrides,
   }
 }
