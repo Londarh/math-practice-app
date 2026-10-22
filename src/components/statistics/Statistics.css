@@ -40,7 +40,7 @@
 /* Big number tiles for the overall totals. */
 .statistics-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
   gap: var(--space-md);
   margin: 0;
 }
@@ -68,14 +68,16 @@
   line-height: 1.1;
 }
 
+/* Two cards per row on wide screens, one on phones; never wider than the window. */
 .statistics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr));
   gap: var(--space-md);
 }
 
 /* One card per operation or level. */
 .counts-card {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -86,6 +88,8 @@
 }
 
 .counts-card__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -112,7 +116,8 @@
 .counts-card__counts,
 .recent-sessions__counts {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* Label/value pairs flow into as many columns as fit, down to one. */
+  grid-template-columns: repeat(auto-fit, minmax(min(8.5rem, 100%), 1fr));
   gap: var(--space-xs) var(--space-md);
   margin: 0;
 }
@@ -186,15 +191,10 @@
   font-weight: var(--font-weight-bold);
 }
 
-@media (min-width: 40rem) {
-  .recent-sessions__counts {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
 
 .mistake-highlights {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
   gap: var(--space-md);
 }
 
@@ -245,7 +245,7 @@
 
 .mistake-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
   gap: var(--space-md);
   margin: 0;
   padding: 0;
