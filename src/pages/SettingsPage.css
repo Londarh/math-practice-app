@@ -146,3 +146,10 @@
   color: var(--color-coral-dark);
   font-weight: var(--font-weight-bold);
 }
+
+.settings-privacy {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}

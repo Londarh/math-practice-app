@@ -162,4 +162,14 @@ describe('SettingsPage', () => {
     expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.sessions)!)).toEqual([])
     expect(localStorage.getItem('someone.else')).toBe('keep')
   })
+
+  it('explains that progress stays in this browser', async () => {
+    await renderAppAt('/settings')
+
+    expect(
+      screen.getByText(/saved only in this browser on this device/),
+    ).toHaveTextContent(
+      "Clearing this browser's history or site data will erase your progress.",
+    )
+  })
 })

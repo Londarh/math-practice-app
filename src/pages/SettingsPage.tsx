@@ -209,6 +209,12 @@ export function SettingsPage() {
           <h2 id="data-heading" className="settings-section__title">
             Your data
           </h2>
+          <p className="settings-privacy">
+            <span aria-hidden="true">🔒 </span>
+            Your progress is saved only in this browser on this device. No
+            account is needed, and nothing is sent anywhere. Clearing this
+            browser&apos;s history or site data will erase your progress.
+          </p>
           <p className="settings-section__hint">
             Erase all settings, practice history, statistics and saved mistakes
             on this device.
