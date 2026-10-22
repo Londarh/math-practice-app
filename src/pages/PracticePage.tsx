@@ -6,6 +6,7 @@ import { EmptyState } from '../components/common/EmptyState'
 import { PageContainer } from '../components/layout/PageContainer'
 import { ProgressBar } from '../components/practice/ProgressBar'
 import { QuestionCard } from '../components/practice/QuestionCard'
+import { useAppData } from '../hooks/useAppData'
 import { usePracticeSession } from '../hooks/usePracticeSession'
 import { DEFAULT_SETTINGS } from '../services/defaultSettings'
 import type { PracticeConfig, SessionResult } from '../types/session'
@@ -47,9 +48,15 @@ function PracticeSession({ config }: { config: PracticeConfig }) {
     recordResult,
     endSession,
   } = usePracticeSession(config)
+  const { recordSessionProgress } = useAppData()
   const [confirmingEnd, setConfirmingEnd] = useState(false)
   const isReview = Boolean(config.reviewItems)
   const settings = DEFAULT_SETTINGS
+
+  // Save every answer as soon as it is given, so a closed tab loses nothing.
+  useEffect(() => {
+    recordSessionProgress(session, attempts)
+  }, [session, attempts, recordSessionProgress])
 
   // When the session finishes, show the summary. Replace the history entry so
   // Back does not drop the student into a finished session.

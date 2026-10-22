@@ -162,4 +162,30 @@ describe('PracticePage', () => {
       ).toBeInTheDocument()
     })
   })
+
+  it('saves each answer and the session to local storage', async () => {
+    const { user } = startSession({
+      operations: ['multiplication'],
+      difficulty: 2,
+      sessionLength: 5,
+    })
+    const question = screen.getByRole('heading', { level: 2 }).textContent
+
+    await answer(user, false)
+
+    const attempts = JSON.parse(localStorage.getItem('mathPractice.attempts')!)
+    const sessions = JSON.parse(localStorage.getItem('mathPractice.sessions')!)
+    expect(attempts).toHaveLength(1)
+    expect(attempts[0]).toMatchObject({
+      operation: 'multiplication',
+      difficulty: 2,
+      selfReportedCorrect: false,
+      source: 'regular',
+      sessionId: sessions[0].id,
+    })
+    expect(question).toContain(String(attempts[0].firstOperand))
+    expect(typeof attempts[0].selectedAnswer).toBe('number')
+    expect(sessions[0]).toMatchObject({ attempted: 1, incorrect: 1 })
+    expect(sessions[0].completedAt).toBeUndefined()
+  })
 })

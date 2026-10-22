@@ -1,5 +1,10 @@
 import { CHOICE_COUNT } from '../services/answerChoices'
 import {
+  DEFAULT_SETTINGS,
+  MAX_MASTERY_THRESHOLD,
+  MIN_MASTERY_THRESHOLD,
+} from '../services/defaultSettings'
+import {
   matchesDifficulty,
   negativesAllowed,
 } from '../services/difficultyRules'
@@ -11,10 +16,12 @@ import type {
 import type {
   PracticeAttempt,
   PracticeConfig,
+  PracticeSession,
   ReviewItem,
   SessionLength,
   SessionResult,
 } from '../types/session'
+import type { AppSettings } from '../types/settings'
 import { ALL_DIFFICULTIES, ALL_OPERATIONS } from './labels'
 import { computeAnswer } from './math'
 
@@ -156,17 +163,106 @@ export function validateQuestion(
 const isCount = (value: unknown) =>
   Number.isInteger(value) && Number(value) >= 0
 
-function isAttempt(value: unknown): value is PracticeAttempt {
+export function isTimestamp(value: unknown): value is string {
+  return typeof value === 'string' && !Number.isNaN(Date.parse(value))
+}
+
+export function isPracticeAttempt(value: unknown): value is PracticeAttempt {
   return (
     isRecord(value) &&
+    typeof value.id === 'string' &&
     typeof value.questionId === 'string' &&
     isMathOperation(value.operation) &&
     Number.isInteger(value.firstOperand) &&
     Number.isInteger(value.secondOperand) &&
     Number.isInteger(value.correctAnswer) &&
+    Number.isInteger(value.selectedAnswer) &&
     typeof value.selfReportedCorrect === 'boolean' &&
-    (value.source === 'regular' || value.source === 'mistake-review')
+    isDifficultyLevel(value.difficulty) &&
+    (value.source === 'regular' || value.source === 'mistake-review') &&
+    isTimestamp(value.attemptedAt) &&
+    typeof value.sessionId === 'string'
   )
+}
+
+export function isPracticeSession(value: unknown): value is PracticeSession {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    isTimestamp(value.startedAt) &&
+    (value.completedAt === undefined || isTimestamp(value.completedAt)) &&
+    Array.isArray(value.operations) &&
+    value.operations.length > 0 &&
+    value.operations.every(isMathOperation) &&
+    isDifficultyLevel(value.difficulty) &&
+    isSessionLength(value.sessionLength) &&
+    isCount(value.attempted) &&
+    isCount(value.correct) &&
+    isCount(value.incorrect) &&
+    Number(value.correct) + Number(value.incorrect) === value.attempted
+  )
+}
+
+/**
+ * Parses a stored list. A value that is not a list is unusable (null); single
+ * broken records inside a list are dropped so the rest can still be used.
+ */
+export function parseRecordList<T>(
+  value: unknown,
+  isItem: (item: unknown) => item is T,
+): T[] | null {
+  if (!Array.isArray(value)) return null
+  return value.filter(isItem)
+}
+
+export const parseStoredAttempts = (value: unknown) =>
+  parseRecordList(value, isPracticeAttempt)
+
+export const parseStoredSessions = (value: unknown) =>
+  parseRecordList(value, isPracticeSession)
+
+export function isMasteryThreshold(value: unknown): value is number {
+  return (
+    Number.isInteger(value) &&
+    Number(value) >= MIN_MASTERY_THRESHOLD &&
+    Number(value) <= MAX_MASTERY_THRESHOLD
+  )
+}
+
+/**
+ * Parses stored settings field by field: a broken field falls back to its
+ * default instead of throwing away every setting.
+ */
+export function parseSettings(value: unknown): AppSettings | null {
+  if (!isRecord(value)) return null
+  const defaults = DEFAULT_SETTINGS
+  const bool = (key: keyof AppSettings, fallback: boolean) =>
+    typeof value[key] === 'boolean' ? (value[key] as boolean) : fallback
+  const operations = value.defaultOperations
+
+  return {
+    soundEnabled: bool('soundEnabled', defaults.soundEnabled),
+    cardAnimationEnabled: bool(
+      'cardAnimationEnabled',
+      defaults.cardAnimationEnabled,
+    ),
+    showExplanations: bool('showExplanations', defaults.showExplanations),
+    defaultSessionLength: isSessionLength(value.defaultSessionLength)
+      ? value.defaultSessionLength
+      : defaults.defaultSessionLength,
+    defaultDifficulty: isDifficultyLevel(value.defaultDifficulty)
+      ? value.defaultDifficulty
+      : defaults.defaultDifficulty,
+    defaultOperations:
+      Array.isArray(operations) &&
+      operations.length > 0 &&
+      operations.every(isMathOperation)
+        ? ALL_OPERATIONS.filter((op) => operations.includes(op))
+        : [...defaults.defaultOperations],
+    masteryThreshold: isMasteryThreshold(value.masteryThreshold)
+      ? value.masteryThreshold
+      : defaults.masteryThreshold,
+  }
 }
 
 /** Checks the finished-session data handed to the summary page. */
@@ -180,7 +276,7 @@ export function parseSessionResult(value: unknown): SessionResult | null {
     !isCount(session.attempted) ||
     !isCount(session.correct) ||
     !isCount(session.incorrect) ||
-    !attempts.every(isAttempt)
+    !attempts.every(isPracticeAttempt)
   ) {
     return null
   }

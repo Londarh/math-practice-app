@@ -1,0 +1,21 @@
+.storage-warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-md);
+  /* Lines up with the page content inside PageContainer's gutters. */
+  width: calc(100% - 2 * var(--page-gutter));
+  max-width: calc(var(--page-max-width) - 2 * var(--page-gutter));
+  margin: var(--space-md) auto 0;
+  padding: var(--space-md) var(--space-lg);
+  border-left: 8px solid var(--color-sun);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  font-weight: var(--font-weight-bold);
+}
+
+.storage-warning p {
+  margin: 0;
+}
