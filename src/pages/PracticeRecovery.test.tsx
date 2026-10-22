@@ -63,9 +63,9 @@ describe('session recovery after a refresh', () => {
 
   it('restores the selected answer and the flipped card', async () => {
     const first = renderAppAt(sessionEntry)
-    const picked = choices()[2]
-      .getAttribute('aria-label')!
-      .replace('Answer ', '')
+    const picked = choices()[2].querySelector(
+      '.answer-choice__value',
+    )!.textContent!
     await first.user.click(choices()[2])
     await first.user.click(screen.getByRole('button', { name: 'Flip Card' }))
 

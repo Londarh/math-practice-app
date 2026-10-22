@@ -23,7 +23,6 @@ export function AnswerChoice({
       type="button"
       className="answer-choice"
       aria-pressed={selected}
-      aria-label={`Answer ${label}`}
       aria-keyshortcuts={String(shortcut)}
       disabled={disabled}
       onClick={() => onSelect(value)}
@@ -31,6 +30,9 @@ export function AnswerChoice({
       <span className="answer-choice__key" aria-hidden="true">
         {shortcut}
       </span>
+      {/* The name comes from the content ("Answer 56"), so it always
+          contains the visible number, as voice control needs. */}
+      <span className="visually-hidden">Answer</span>{' '}
       <span className="answer-choice__value">{label}</span>
       {/* A check mark so the choice is not shown by color alone. */}
       <span className="answer-choice__check" aria-hidden="true">

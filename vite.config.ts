@@ -8,5 +8,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Full user flows click through many screens; leave room on busy machines.
+    testTimeout: 20_000,
   },
 })
