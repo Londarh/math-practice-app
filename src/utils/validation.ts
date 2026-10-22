@@ -17,7 +17,6 @@ import type {
   PracticeAttempt,
   PracticeConfig,
   PracticeSession,
-  ReviewItem,
   SessionLength,
   SessionResult,
 } from '../types/session'
@@ -46,22 +45,13 @@ export function isSessionLength(value: unknown): value is SessionLength {
   )
 }
 
-function isReviewItem(value: unknown): value is ReviewItem {
-  return (
-    isRecord(value) &&
-    isMathOperation(value.operation) &&
-    Number.isInteger(value.firstOperand) &&
-    Number.isInteger(value.secondOperand)
-  )
-}
-
 /**
- * Checks data that arrives from outside the component tree (router state,
- * later local storage) and returns a clean config, or null if it is unusable.
+ * Checks data that arrives from outside the component tree (router state)
+ * and returns a clean config, or null if it is unusable.
  */
 export function parsePracticeConfig(value: unknown): PracticeConfig | null {
   if (!isRecord(value)) return null
-  const { operations, difficulty, sessionLength, reviewItems } = value
+  const { operations, difficulty, sessionLength, reviewPatterns } = value
 
   if (!Array.isArray(operations) || operations.length === 0) return null
   if (!operations.every(isMathOperation)) return null
@@ -74,19 +64,15 @@ export function parsePracticeConfig(value: unknown): PracticeConfig | null {
     sessionLength,
   }
 
-  if (reviewItems !== undefined) {
+  if (reviewPatterns !== undefined) {
     if (
-      !Array.isArray(reviewItems) ||
-      reviewItems.length === 0 ||
-      !reviewItems.every(isReviewItem)
+      !Array.isArray(reviewPatterns) ||
+      reviewPatterns.length === 0 ||
+      !reviewPatterns.every(isMistakePattern)
     ) {
       return null
     }
-    config.reviewItems = reviewItems.map((item) => ({
-      operation: item.operation,
-      firstOperand: item.firstOperand,
-      secondOperand: item.secondOperand,
-    }))
+    config.reviewPatterns = reviewPatterns.map((pattern) => ({ ...pattern }))
   }
 
   return config
@@ -183,7 +169,9 @@ export function isPracticeAttempt(value: unknown): value is PracticeAttempt {
     isDifficultyLevel(value.difficulty) &&
     (value.source === 'regular' || value.source === 'mistake-review') &&
     isTimestamp(value.attemptedAt) &&
-    typeof value.sessionId === 'string'
+    typeof value.sessionId === 'string' &&
+    (value.mistakePatternId === undefined ||
+      typeof value.mistakePatternId === 'string')
   )
 }
 
@@ -201,7 +189,10 @@ export function isPracticeSession(value: unknown): value is PracticeSession {
     isCount(value.attempted) &&
     isCount(value.correct) &&
     isCount(value.incorrect) &&
-    Number(value.correct) + Number(value.incorrect) === value.attempted
+    Number(value.correct) + Number(value.incorrect) === value.attempted &&
+    (value.mode === undefined ||
+      value.mode === 'regular' ||
+      value.mode === 'mistake-review')
   )
 }
 

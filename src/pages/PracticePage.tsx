@@ -50,7 +50,7 @@ function PracticeSession({ config }: { config: PracticeConfig }) {
   } = usePracticeSession(config)
   const { recordSessionProgress, settings } = useAppData()
   const [confirmingEnd, setConfirmingEnd] = useState(false)
-  const isReview = Boolean(config.reviewItems)
+  const isReview = Boolean(config.reviewPatterns)
 
   // Save every answer as soon as it is given, so a closed tab loses nothing.
   useEffect(() => {
@@ -92,7 +92,9 @@ function PracticeSession({ config }: { config: PracticeConfig }) {
         <div className="practice-page__status">
           <p className="practice-page__details">
             <span className="practice-page__chip">
-              Level {config.difficulty}: {DIFFICULTY_LABELS[config.difficulty]}
+              {isReview
+                ? 'Mistake review'
+                : `Level ${config.difficulty}: ${DIFFICULTY_LABELS[config.difficulty]}`}
             </span>
             <span className="practice-page__chip">{operations}</span>
           </p>

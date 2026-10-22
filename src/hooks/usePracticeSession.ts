@@ -1,19 +1,30 @@
 import { useCallback, useReducer } from 'react'
+import { generateQuestionForOperations } from '../services/questionGenerator'
 import {
-  createQuestion,
-  generateQuestionForOperations,
-} from '../services/questionGenerator'
+  generateSimilarQuestion,
+  questionKey,
+} from '../services/similarQuestionGenerator'
 import type { Question } from '../types/question'
 import type {
   PracticeAttempt,
   PracticeConfig,
   PracticeSession,
-  ReviewItem,
 } from '../types/session'
 import { createId } from '../utils/ids'
 
 /** Tries to find a different question before allowing an immediate repeat. */
 export const MAX_REPEAT_AVOIDANCE_ATTEMPTS = 10
+
+/** Mistake review avoids repeating any of this many recent questions. */
+export const RECENT_REVIEW_QUESTIONS = 6
+
+type ShownQuestion = Pick<
+  Question,
+  'operation' | 'firstOperand' | 'secondOperand'
+>
+
+const keyOf = (q: ShownQuestion) =>
+  questionKey(q.operation, q.firstOperand, q.secondOperand)
 
 export interface PracticeSessionState {
   config: PracticeConfig
@@ -42,28 +53,29 @@ export type PracticeSessionAction =
 
 /** Number of questions in the session, or null for continuous practice. */
 export function sessionTotal(config: PracticeConfig): number | null {
-  if (config.reviewItems) return config.reviewItems.length
   return config.sessionLength === 'continuous' ? null : config.sessionLength
 }
 
 /**
  * Picks the question after `attemptedCount` answers, or null when a
  * fixed-length session is finished. May throw if generation fails.
+ * `recent` holds questions already shown, newest last.
  */
 export function nextQuestionFor(
   config: PracticeConfig,
   attemptedCount: number,
   previous: Question | null,
+  recent: readonly ShownQuestion[] = previous ? [previous] : [],
 ): Question | null {
   const total = sessionTotal(config)
   if (total !== null && attemptedCount >= total) return null
 
-  if (config.reviewItems) {
-    const item = config.reviewItems[attemptedCount]
-    return createQuestion({
-      ...item,
-      difficulty: config.difficulty,
-      source: 'mistake-review',
+  if (config.reviewPatterns && config.reviewPatterns.length > 0) {
+    // Take the patterns in turn, so one session mixes several mistakes.
+    const patterns = config.reviewPatterns
+    const pattern = patterns[attemptedCount % patterns.length]
+    return generateSimilarQuestion(pattern, {
+      avoid: new Set(recent.slice(-RECENT_REVIEW_QUESTIONS).map(keyOf)),
     })
   }
 
@@ -106,12 +118,11 @@ export function createInitialState(
       startedAt: new Date().toISOString(),
       operations: config.operations,
       difficulty: config.difficulty,
-      sessionLength: config.reviewItems
-        ? config.reviewItems.length
-        : config.sessionLength,
+      sessionLength: config.sessionLength,
       attempted: 0,
       correct: 0,
       incorrect: 0,
+      mode: config.reviewPatterns ? 'mistake-review' : 'regular',
     },
     currentQuestion,
     currentQuestionIndex: 0,
@@ -151,6 +162,9 @@ export function practiceSessionReducer(
         source: question.source,
         attemptedAt: action.attemptedAt,
         sessionId: state.session.id,
+        ...(question.mistakePatternId && {
+          mistakePatternId: question.mistakePatternId,
+        }),
       }
       const session: PracticeSession = {
         ...state.session,
@@ -205,6 +219,8 @@ export function usePracticeSession(config: PracticeConfig) {
           state.config,
           session.attempted + 1,
           currentQuestion,
+          // Attempts hold the same numbers as the questions already shown.
+          [...state.attempts, currentQuestion],
         )
       } catch {
         error = GENERATION_ERROR
@@ -234,24 +250,4 @@ export function usePracticeSession(config: PracticeConfig) {
     recordResult,
     endSession,
   }
-}
-
-/** The facts marked wrong in a session, without duplicates, in order. */
-export function reviewItemsFromAttempts(
-  attempts: readonly PracticeAttempt[],
-): ReviewItem[] {
-  const seen = new Set<string>()
-  const items: ReviewItem[] = []
-  for (const attempt of attempts) {
-    if (attempt.selfReportedCorrect) continue
-    const key = `${attempt.operation}:${attempt.firstOperand}:${attempt.secondOperand}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    items.push({
-      operation: attempt.operation,
-      firstOperand: attempt.firstOperand,
-      secondOperand: attempt.secondOperand,
-    })
-  }
-  return items
 }

@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { AppProvider } from '../app/AppProvider'
 import { STORAGE_KEYS } from '../services/storageService'
+import { makePattern } from '../test/fixtures'
 import { PracticeSetupPage } from './PracticeSetupPage'
 
 /** Stands in for the session page and shows the config it received. */
@@ -186,5 +187,86 @@ describe('PracticeSetupPage', () => {
     expect(
       JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!),
     ).toMatchObject({ defaultDifficulty: 3 })
+  })
+})
+
+describe('PracticeSetupPage review mode', () => {
+  const reviewOption = () =>
+    screen.getByRole('radio', { name: /Practice my mistakes/ })
+
+  it('offers regular practice and mistake review, regular by default', () => {
+    renderSetup()
+
+    expect(
+      screen.getByRole('radio', { name: 'Regular practice' }),
+    ).toBeChecked()
+    expect(reviewOption()).not.toBeChecked()
+  })
+
+  it('disables mistake review and explains why when there are no mistakes', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.mistakePatterns,
+      JSON.stringify([makePattern({ mastered: true, similarCorrectCount: 3 })]),
+    )
+    renderSetup()
+
+    expect(reviewOption()).toBeDisabled()
+    expect(reviewOption()).toHaveAccessibleDescription(
+      /you have no mistakes to practice/,
+    )
+  })
+
+  it('shows how many active mistakes there are', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.mistakePatterns,
+      JSON.stringify([
+        makePattern(),
+        makePattern({
+          operation: 'addition',
+          firstOperand: 2,
+          secondOperand: 3,
+          correctAnswer: 5,
+        }),
+        makePattern({ mastered: true, similarCorrectCount: 3 }),
+      ]),
+    )
+    renderSetup()
+
+    expect(reviewOption()).toBeEnabled()
+    expect(reviewOption()).toHaveAccessibleName(/2 mistakes to practice/)
+    expect(
+      screen.getByText('You have 2 active mistakes to practice.'),
+    ).toBeInTheDocument()
+  })
+
+  it('starts a review session built from the active mistakes', async () => {
+    const times = makePattern({ incorrectCount: 3 })
+    const plus = makePattern({
+      operation: 'addition',
+      firstOperand: 2,
+      secondOperand: 3,
+      correctAnswer: 5,
+      difficulty: 1,
+    })
+    localStorage.setItem(
+      STORAGE_KEYS.mistakePatterns,
+      JSON.stringify([plus, times]),
+    )
+    const { user } = renderSetup()
+
+    await user.click(reviewOption())
+    expect(screen.getByRole('checkbox', { name: 'Addition' })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: /Beginner/ })).toBeDisabled()
+    await user.click(screen.getByRole('radio', { name: '5 questions' }))
+    await user.click(screen.getByRole('button', { name: 'Start Session' }))
+
+    const { config } = JSON.parse(screen.getByTestId('received').textContent!)
+    expect(config.sessionLength).toBe(5)
+    expect(config.operations).toEqual(['addition', 'multiplication'])
+    // The more often missed fact comes first.
+    expect(config.reviewPatterns.map((p: { id: string }) => p.id)).toEqual([
+      times.id,
+      plus.id,
+    ])
   })
 })

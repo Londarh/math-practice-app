@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { makePattern } from '../test/fixtures'
 import type { Question } from '../types/question'
 import { parsePracticeConfig, validateQuestion } from './validation'
 
@@ -17,18 +18,16 @@ describe('parsePracticeConfig', () => {
     })
   })
 
-  it('accepts continuous sessions and review items', () => {
+  it('accepts continuous sessions and review patterns', () => {
     const config = parsePracticeConfig({
       operations: ['multiplication'],
       difficulty: 1,
       sessionLength: 'continuous',
-      reviewItems: [
-        { operation: 'multiplication', firstOperand: 3, secondOperand: 4 },
-      ],
+      reviewPatterns: [makePattern()],
     })
 
     expect(config?.sessionLength).toBe('continuous')
-    expect(config?.reviewItems).toHaveLength(1)
+    expect(config?.reviewPatterns).toHaveLength(1)
   })
 
   it.each([
@@ -48,12 +47,21 @@ describe('parsePracticeConfig', () => {
       { operations: ['addition'], difficulty: 1, sessionLength: 0 },
     ],
     [
-      'bad review items',
+      'bad review patterns',
       {
         operations: ['addition'],
         difficulty: 1,
         sessionLength: 5,
-        reviewItems: [{ operation: 'addition', firstOperand: 'x' }],
+        reviewPatterns: [{ operation: 'addition', firstOperand: 'x' }],
+      },
+    ],
+    [
+      'empty review patterns',
+      {
+        operations: ['addition'],
+        difficulty: 1,
+        sessionLength: 5,
+        reviewPatterns: [],
       },
     ],
   ])('rejects %s', (_label, value) => {

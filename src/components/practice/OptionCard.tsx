@@ -11,6 +11,9 @@ interface OptionCardProps {
   symbol?: ReactNode
   description?: string
   className?: string
+  disabled?: boolean
+  /** ID of text that explains this option, e.g. why it is disabled. */
+  describedBy?: string
 }
 
 /** A native checkbox or radio button shown as a large, tappable card. */
@@ -23,6 +26,8 @@ export function OptionCard({
   symbol,
   description,
   className,
+  disabled,
+  describedBy,
 }: OptionCardProps) {
   return (
     <label className={['option-card', className].filter(Boolean).join(' ')}>
@@ -32,6 +37,8 @@ export function OptionCard({
         name={name}
         checked={checked}
         onChange={onChange}
+        disabled={disabled}
+        aria-describedby={describedBy}
       />
       <span className="option-card__body">
         {symbol && (

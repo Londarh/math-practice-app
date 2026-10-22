@@ -4,10 +4,16 @@ import { Button } from '../components/common/Button'
 import { PageContainer } from '../components/layout/PageContainer'
 import { DifficultySelector } from '../components/practice/DifficultySelector'
 import { OperationSelector } from '../components/practice/OperationSelector'
+import { ReviewModeSelector } from '../components/practice/ReviewModeSelector'
 import { SessionLengthSelector } from '../components/practice/SessionLengthSelector'
 import { useAppData } from '../hooks/useAppData'
+import { buildReviewConfig, isActivePattern } from '../services/mistakeService'
 import type { DifficultyLevel, MathOperation } from '../types/question'
-import type { PracticeConfig, SessionLength } from '../types/session'
+import type {
+  PracticeConfig,
+  PracticeMode,
+  SessionLength,
+} from '../types/session'
 import { parsePracticeConfig } from '../utils/validation'
 import './PracticeSetupPage.css'
 
@@ -23,7 +29,8 @@ export function PracticeSetupPage() {
   const location = useLocation()
   const locationState = (location.state ?? {}) as PracticeSetupLocationState
   const initial = parsePracticeConfig(locationState.config)
-  const { settings } = useAppData()
+  const { settings, mistakePatterns } = useAppData()
+  const activeMistakes = mistakePatterns.filter(isActivePattern).length
 
   const [operations, setOperations] = useState<MathOperation[]>(
     initial?.operations ?? settings.defaultOperations,
@@ -35,13 +42,22 @@ export function PracticeSetupPage() {
     initial?.sessionLength ?? settings.defaultSessionLength,
   )
 
-  const canStart = operations.length > 0
+  const [mode, setMode] = useState<PracticeMode>(
+    initial?.reviewPatterns && activeMistakes > 0
+      ? 'mistake-review'
+      : 'regular',
+  )
+  const isReview = mode === 'mistake-review'
+
+  const canStart = isReview ? activeMistakes > 0 : operations.length > 0
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     if (!canStart) return
-    const config: PracticeConfig = { operations, difficulty, sessionLength }
-    navigate('/practice/session', { state: { config } })
+    const config: PracticeConfig | null = isReview
+      ? buildReviewConfig(mistakePatterns, sessionLength)
+      : { operations, difficulty, sessionLength }
+    if (config) navigate('/practice/session', { state: { config } })
   }
 
   return (
@@ -52,11 +68,34 @@ export function PracticeSetupPage() {
         </p>
       )}
       <form className="practice-setup" onSubmit={handleSubmit}>
-        <OperationSelector value={operations} onChange={setOperations} />
-        <DifficultySelector value={difficulty} onChange={setDifficulty} />
+        <OperationSelector
+          value={operations}
+          onChange={setOperations}
+          disabled={isReview}
+          hint={
+            isReview
+              ? 'Mistake review uses the operations of your mistakes.'
+              : undefined
+          }
+        />
+        <DifficultySelector
+          value={difficulty}
+          onChange={setDifficulty}
+          disabled={isReview}
+          hint={
+            isReview
+              ? 'Mistake review uses the level each mistake was made at.'
+              : undefined
+          }
+        />
         <SessionLengthSelector
           value={sessionLength}
           onChange={setSessionLength}
+        />
+        <ReviewModeSelector
+          value={mode}
+          onChange={setMode}
+          activeMistakes={activeMistakes}
         />
 
         <div className="practice-setup__actions">

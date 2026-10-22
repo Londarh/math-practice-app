@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { makePattern } from '../test/fixtures'
+import type { Question } from '../types/question'
 import type { PracticeConfig } from '../types/session'
+import { validateQuestion } from '../utils/validation'
 import {
   createInitialState,
   nextQuestionFor,
@@ -158,27 +161,74 @@ describe('nextQuestionFor', () => {
     expect(nextQuestionFor(config, 5, null)).toBeNull()
   })
 
-  it('replays review items in order as mistake-review questions', () => {
+  it('builds review questions from the patterns in turn', () => {
+    const times = makePattern({ id: 'times' })
+    const minus = makePattern({
+      id: 'minus',
+      operation: 'subtraction',
+      firstOperand: 9,
+      secondOperand: 4,
+      correctAnswer: 5,
+      difficulty: 1,
+    })
     const review: PracticeConfig = {
       ...config,
-      reviewItems: [
-        { operation: 'multiplication', firstOperand: 7, secondOperand: 8 },
-        { operation: 'division', firstOperand: 56, secondOperand: 7 },
-      ],
+      sessionLength: 3,
+      reviewPatterns: [times, minus],
     }
 
-    expect(sessionTotal(review)).toBe(2)
-    const first = nextQuestionFor(review, 0, null)
-    const second = nextQuestionFor(review, 1, first)
-    expect(first).toMatchObject({
-      displayText: '7 × 8 = ?',
-      correctAnswer: 56,
+    expect(sessionTotal(review)).toBe(3)
+    const questions = [0, 1, 2].map((i) => nextQuestionFor(review, i, null)!)
+    expect(questions.map((q) => q.mistakePatternId)).toEqual([
+      'times',
+      'minus',
+      'times',
+    ])
+    for (const q of questions) {
+      expect(q.source).toBe('mistake-review')
+      expect(validateQuestion(q)).toEqual([])
+    }
+    expect(nextQuestionFor(review, 3, questions[2])).toBeNull()
+  })
+
+  it('does not repeat recent review questions when it can avoid it', () => {
+    const review: PracticeConfig = {
+      ...config,
+      sessionLength: 'continuous',
+      reviewPatterns: [makePattern()],
+    }
+    const shown: Question[] = []
+    for (let i = 0; i < 4; i++) {
+      shown.push(nextQuestionFor(review, i, shown.at(-1) ?? null, shown)!)
+    }
+
+    expect(new Set(shown.map((q) => q.displayText)).size).toBe(4)
+  })
+})
+
+describe('mistake-review sessions', () => {
+  it('marks the session as a review and links attempts to patterns', () => {
+    const pattern = makePattern({ id: 'p1' })
+    let state = createInitialState({
+      ...config,
+      reviewPatterns: [pattern],
+    })
+    expect(state.session.mode).toBe('mistake-review')
+
+    state = record(state, true)
+
+    expect(state.attempts[0]).toMatchObject({
       source: 'mistake-review',
+      mistakePatternId: 'p1',
     })
-    expect(second).toMatchObject({
-      displayText: '56 ÷ 7 = ?',
-      correctAnswer: 8,
-    })
-    expect(nextQuestionFor(review, 2, second)).toBeNull()
+  })
+
+  it('regular sessions have no pattern link', () => {
+    let state = createInitialState(config)
+    expect(state.session.mode).toBe('regular')
+
+    state = record(state, false)
+
+    expect(state.attempts[0].mistakePatternId).toBeUndefined()
   })
 })

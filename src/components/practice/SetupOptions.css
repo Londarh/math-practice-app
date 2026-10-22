@@ -143,3 +143,21 @@
   border-color: var(--color-border);
   transform: none;
 }
+
+.option-card:has(.option-card__input:disabled) {
+  cursor: not-allowed;
+}
+
+.option-card__input:disabled + .option-card__body {
+  opacity: 0.55;
+  transform: none;
+  border-color: var(--color-border);
+}
+
+.setup-group__note {
+  margin: var(--space-md) 0 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-weight: var(--font-weight-bold);
+}

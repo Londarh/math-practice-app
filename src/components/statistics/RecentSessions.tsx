@@ -36,10 +36,16 @@ export function RecentSessions({
                     .map((op) => OPERATION_LABELS[op])
                     .join(', ')}
                 </span>
-                <span className="recent-sessions__chip">
-                  Level {session.difficulty}:{' '}
-                  {DIFFICULTY_LABELS[session.difficulty]}
-                </span>
+                {session.mode === 'mistake-review' ? (
+                  <span className="recent-sessions__chip">
+                    <span aria-hidden="true">🎯 </span>Mistake review
+                  </span>
+                ) : (
+                  <span className="recent-sessions__chip">
+                    Level {session.difficulty}:{' '}
+                    {DIFFICULTY_LABELS[session.difficulty]}
+                  </span>
+                )}
               </p>
               <dl className="recent-sessions__counts">
                 <div>

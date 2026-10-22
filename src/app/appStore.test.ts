@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS } from '../services/defaultSettings'
 import { calculateStatistics } from '../services/statisticsService'
 import { STORAGE_KEYS } from '../services/storageService'
 import { FakeStorage } from '../test/fakeStorage'
-import { makeAttempt, makeSession } from '../test/fixtures'
+import { makeAttempt, makePattern, makeSession } from '../test/fixtures'
 import {
   createAppStore,
   defaultAppData,
@@ -382,5 +382,58 @@ describe('mistake patterns in the store', () => {
     ])
 
     expect(resetStatistics(data).mistakePatterns).toEqual(data.mistakePatterns)
+  })
+})
+
+describe('mistake review in the store', () => {
+  it('review answers update the original pattern until it is mastered', () => {
+    const store = createAppStore(new FakeStorage())
+    store.updateSettings({ masteryThreshold: 2 })
+    store.recordSessionProgress(
+      makeSession({ id: 's1', correct: 0, incorrect: 1 }),
+      [makeAttempt({ sessionId: 's1', selfReportedCorrect: false })],
+    )
+    const [pattern] = store.getState().mistakePatterns
+    const reviewAttempt = () =>
+      makeAttempt({
+        sessionId: 's2',
+        source: 'mistake-review',
+        mistakePatternId: pattern.id,
+        firstOperand: 3,
+        secondOperand: 3,
+        correctAnswer: 6,
+      })
+    const first = reviewAttempt()
+    const second = reviewAttempt()
+
+    store.recordSessionProgress(makeSession({ id: 's2' }), [first])
+    expect(store.getState().mistakePatterns[0].mastered).toBe(false)
+    store.recordSessionProgress(
+      makeSession({ id: 's2', attempted: 2, correct: 2 }),
+      [first, second],
+    )
+
+    const [updated] = store.getState().mistakePatterns
+    expect(updated).toMatchObject({ similarCorrectCount: 2, mastered: true })
+    expect(store.getState().mistakePatterns).toHaveLength(1)
+    expect(store.getState().statistics.reviewCorrect).toBe(2)
+  })
+
+  it('changing the mastery threshold re-checks saved patterns', () => {
+    const storage = new FakeStorage({
+      [STORAGE_KEYS.mistakePatterns]: [
+        makePattern({ similarCorrectCount: 2, mastered: false }),
+      ],
+    })
+    const store = createAppStore(storage)
+
+    store.updateSettings({ masteryThreshold: 2 })
+    expect(store.getState().mistakePatterns[0].mastered).toBe(true)
+
+    store.updateSettings({ masteryThreshold: 4 })
+    expect(store.getState().mistakePatterns[0].mastered).toBe(false)
+    expect(createAppStore(storage).getState().mistakePatterns[0].mastered).toBe(
+      false,
+    )
   })
 })

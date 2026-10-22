@@ -1,5 +1,8 @@
 import { DEFAULT_SETTINGS } from '../services/defaultSettings'
-import { applyAttemptToPatterns } from '../services/mistakeService'
+import {
+  applyAttemptToPatterns,
+  applyMasteryThreshold,
+} from '../services/mistakeService'
 import {
   addAttemptToStatistics,
   calculateStatistics,
@@ -165,7 +168,12 @@ export function recordSessionProgress(
     ),
     statistics: newAttempts.reduce(addAttemptToStatistics, data.statistics),
     mistakePatterns: newAttempts.reduce(
-      applyAttemptToPatterns,
+      (patterns, attempt) =>
+        applyAttemptToPatterns(
+          patterns,
+          attempt,
+          data.settings.masteryThreshold,
+        ),
       data.mistakePatterns,
     ),
   }
@@ -195,7 +203,15 @@ export function updateSettings(
     (key) =>
       JSON.stringify(settings[key]) === JSON.stringify(data.settings[key]),
   )
-  return same ? data : { ...data, settings }
+  if (same) return data
+  return {
+    ...data,
+    settings,
+    mistakePatterns: applyMasteryThreshold(
+      data.mistakePatterns,
+      settings.masteryThreshold,
+    ),
+  }
 }
 
 export interface AppStore {

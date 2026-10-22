@@ -15,9 +15,20 @@ function encouragement(accuracy: number, attempted: number): string {
 export function SessionSummary({ result }: { result: SessionResult }) {
   const { session, attempts, config } = result
   const accuracy = calculateAccuracy(session.correct, session.attempted)
-  const reviewCompleted = attempts.filter(
-    (a) => a.source === 'mistake-review',
+  const reviewAttempts = attempts.filter((a) => a.source === 'mistake-review')
+  const reviewCompleted = reviewAttempts.length
+  const reviewCorrect = reviewAttempts.filter(
+    (a) => a.selfReportedCorrect,
   ).length
+  // A review session uses the level each mistake was made at.
+  const levels = [
+    ...new Set(
+      config.reviewPatterns?.map((p) => p.difficulty) ?? [config.difficulty],
+    ),
+  ]
+    .sort()
+    .map((level) => `Level ${level}: ${DIFFICULTY_LABELS[level]}`)
+    .join(', ')
   const operations = config.operations
     .map((op) => OPERATION_LABELS[op])
     .join(', ')
@@ -54,14 +65,18 @@ export function SessionSummary({ result }: { result: SessionResult }) {
         </div>
         <div>
           <dt>Difficulty level</dt>
-          <dd>
-            Level {config.difficulty}: {DIFFICULTY_LABELS[config.difficulty]}
-          </dd>
+          <dd>{levels}</dd>
         </div>
         <div>
           <dt>Mistake-review questions completed</dt>
           <dd>{reviewCompleted}</dd>
         </div>
+        {reviewCompleted > 0 && (
+          <div>
+            <dt>Mistake-review questions answered correctly</dt>
+            <dd>{reviewCorrect}</dd>
+          </div>
+        )}
       </dl>
     </section>
   )

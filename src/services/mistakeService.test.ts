@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { makeAttempt } from '../test/fixtures'
+import { makeAttempt, makePattern } from '../test/fixtures'
+import type { MistakePattern } from '../types/mistake'
 import {
   applyAttemptToPatterns,
+  applyMasteryThreshold,
+  buildReviewConfig,
   createMistakePattern,
   factKey,
   findPattern,
+  isActivePattern,
+  prioritizePatterns,
   recordMistake,
+  reviewPriority,
 } from './mistakeService'
 
 const wrong = (overrides = {}) =>
@@ -122,16 +128,272 @@ describe('recordMistake', () => {
   })
 })
 
+const THRESHOLD = 3
+
+const review = (patternId: string, correct: boolean) =>
+  makeAttempt({
+    operation: 'division',
+    firstOperand: 56,
+    secondOperand: 7,
+    correctAnswer: 8,
+    source: 'mistake-review',
+    mistakePatternId: patternId,
+    selfReportedCorrect: correct,
+    attemptedAt: '2026-10-21T12:00:00.000Z',
+  })
+
 describe('applyAttemptToPatterns', () => {
-  it('ignores correct answers', () => {
+  it('ignores correct regular answers', () => {
     const patterns = recordMistake([], wrong())
 
     expect(
-      applyAttemptToPatterns(patterns, wrong({ selfReportedCorrect: true })),
+      applyAttemptToPatterns(
+        patterns,
+        wrong({ selfReportedCorrect: true }),
+        THRESHOLD,
+      ),
     ).toBe(patterns)
   })
 
-  it('records incorrect answers', () => {
-    expect(applyAttemptToPatterns([], wrong())).toHaveLength(1)
+  it('records incorrect regular answers', () => {
+    expect(applyAttemptToPatterns([], wrong(), THRESHOLD)).toHaveLength(1)
+  })
+
+  it('counts a correct review answer for the original pattern', () => {
+    const [pattern] = recordMistake([], wrong())
+
+    const [updated] = applyAttemptToPatterns(
+      [pattern],
+      review(pattern.id, true),
+      THRESHOLD,
+    )
+
+    expect(updated.similarCorrectCount).toBe(1)
+    expect(updated.incorrectCount).toBe(1)
+    expect(updated.mastered).toBe(false)
+  })
+
+  it('treats a wrong review answer as another miss of the original', () => {
+    const [pattern] = recordMistake([], wrong())
+    const progressed = { ...pattern, similarCorrectCount: 2 }
+
+    const patterns = applyAttemptToPatterns(
+      [progressed],
+      review(pattern.id, false),
+      THRESHOLD,
+    )
+
+    // No new pattern is made for the similar question itself.
+    expect(patterns).toHaveLength(1)
+    expect(patterns[0]).toMatchObject({
+      incorrectCount: 2,
+      similarCorrectCount: 1,
+      lastIncorrectAt: '2026-10-21T12:00:00.000Z',
+      mastered: false,
+    })
+  })
+
+  it('never lets progress drop below zero', () => {
+    const [pattern] = recordMistake([], wrong())
+
+    const [updated] = applyAttemptToPatterns(
+      [pattern],
+      review(pattern.id, false),
+      THRESHOLD,
+    )
+
+    expect(updated.similarCorrectCount).toBe(0)
+  })
+
+  it('falls back to normal tracking when the pattern no longer exists', () => {
+    const patterns = applyAttemptToPatterns(
+      [],
+      review('deleted', false),
+      THRESHOLD,
+    )
+
+    expect(patterns).toHaveLength(1)
+    expect(patterns[0]).toMatchObject({
+      operation: 'division',
+      firstOperand: 56,
+    })
+  })
+})
+
+describe('mastery transitions', () => {
+  function reviewTimes(
+    pattern: MistakePattern,
+    results: boolean[],
+    threshold = THRESHOLD,
+  ) {
+    return results.reduce(
+      (patterns, correct) =>
+        applyAttemptToPatterns(
+          patterns,
+          review(pattern.id, correct),
+          threshold,
+        ),
+      [pattern],
+    )[0]
+  }
+
+  it('becomes mastered after three correct similar answers', () => {
+    const [pattern] = recordMistake([], wrong())
+
+    expect(reviewTimes(pattern, [true, true]).mastered).toBe(false)
+    expect(reviewTimes(pattern, [true, true, true]).mastered).toBe(true)
+  })
+
+  it('uses the configured threshold', () => {
+    const [pattern] = recordMistake([], wrong())
+
+    expect(reviewTimes(pattern, [true], 1).mastered).toBe(true)
+    expect(reviewTimes(pattern, [true, true, true], 5).mastered).toBe(false)
+    expect(
+      reviewTimes(pattern, [true, true, true, true, true], 5).mastered,
+    ).toBe(true)
+  })
+
+  it('a wrong review answer delays mastery', () => {
+    const [pattern] = recordMistake([], wrong())
+
+    const updated = reviewTimes(pattern, [true, true, false, true])
+
+    expect(updated.similarCorrectCount).toBe(2)
+    expect(updated.mastered).toBe(false)
+  })
+
+  it('a mastered pattern becomes active again after a new mistake', () => {
+    const [pattern] = recordMistake([], wrong())
+    const mastered = reviewTimes(pattern, [true, true, true])
+    expect(isActivePattern(mastered)).toBe(false)
+
+    const [again] = applyAttemptToPatterns([mastered], wrong(), THRESHOLD)
+
+    expect(again.id).toBe(pattern.id)
+    expect(again.mastered).toBe(false)
+    expect(again.similarCorrectCount).toBe(0)
+    expect(again.incorrectCount).toBe(2)
+    expect(isActivePattern(again)).toBe(true)
+  })
+
+  it('re-checks mastery when the threshold changes', () => {
+    const two = makePattern({ similarCorrectCount: 2 })
+    const four = makePattern({ similarCorrectCount: 4, mastered: true })
+
+    const lowered = applyMasteryThreshold([two, four], 2)
+    expect(lowered.map((p) => p.mastered)).toEqual([true, true])
+
+    const raised = applyMasteryThreshold([two, four], 5)
+    expect(raised.map((p) => p.mastered)).toEqual([false, false])
+
+    const unchanged = [two, four]
+    expect(applyMasteryThreshold(unchanged, 3)).toBe(unchanged)
+  })
+})
+
+describe('review priority', () => {
+  const now = Date.parse('2026-10-21T12:00:00.000Z')
+  const daysAgo = (days: number) =>
+    new Date(now - days * 86_400_000).toISOString()
+
+  it('ranks frequently missed patterns higher', () => {
+    const often = makePattern({
+      incorrectCount: 4,
+      lastIncorrectAt: daysAgo(3),
+    })
+    const once = makePattern({ incorrectCount: 1, lastIncorrectAt: daysAgo(3) })
+
+    expect(reviewPriority(often, now)).toBeGreaterThan(
+      reviewPriority(once, now),
+    )
+    expect(prioritizePatterns([once, often], now)).toEqual([often, once])
+  })
+
+  it('ranks recently missed patterns higher', () => {
+    const recent = makePattern({ lastIncorrectAt: daysAgo(0.5) })
+    const week = makePattern({ lastIncorrectAt: daysAgo(5) })
+    const old = makePattern({ lastIncorrectAt: daysAgo(60) })
+
+    expect(prioritizePatterns([old, week, recent], now)).toEqual([
+      recent,
+      week,
+      old,
+    ])
+  })
+
+  it('ranks patterns with little successful review higher', () => {
+    const at = daysAgo(3)
+    const fresh = makePattern({ similarCorrectCount: 0, lastIncorrectAt: at })
+    const some = makePattern({ similarCorrectCount: 1, lastIncorrectAt: at })
+    const more = makePattern({ similarCorrectCount: 2, lastIncorrectAt: at })
+
+    expect(prioritizePatterns([more, some, fresh], now)).toEqual([
+      fresh,
+      some,
+      more,
+    ])
+  })
+
+  it('leaves out mastered patterns', () => {
+    const active = makePattern()
+    const mastered = makePattern({ mastered: true, similarCorrectCount: 3 })
+
+    expect(prioritizePatterns([mastered, active], now)).toEqual([active])
+  })
+
+  it('randomizes the order of patterns with equal priority', () => {
+    const a = makePattern({ lastIncorrectAt: daysAgo(2) })
+    const b = makePattern({ lastIncorrectAt: daysAgo(2) })
+    const top = makePattern({ incorrectCount: 5, lastIncorrectAt: daysAgo(2) })
+    const seconds = new Set<string>()
+    for (const value of [0, 0.3, 0.6, 0.99]) {
+      const order = prioritizePatterns([a, b, top], now, () => value)
+      // The clear winner always comes first; the tie can go either way.
+      expect(order[0]).toBe(top)
+      seconds.add(order[1].id)
+    }
+
+    expect(seconds).toEqual(new Set([a.id, b.id]))
+  })
+})
+
+describe('buildReviewConfig', () => {
+  it('returns null when there is nothing to review', () => {
+    expect(buildReviewConfig([], 10)).toBeNull()
+    expect(buildReviewConfig([makePattern({ mastered: true })], 10)).toBeNull()
+  })
+
+  it('uses the highest-priority patterns, at most one per question', () => {
+    const patterns = Array.from({ length: 8 }, (_, i) =>
+      makePattern({ incorrectCount: i + 1 }),
+    )
+
+    const config = buildReviewConfig(patterns, 5)!
+
+    expect(config.sessionLength).toBe(5)
+    expect(config.reviewPatterns!.map((p) => p.incorrectCount)).toEqual([
+      8, 7, 6, 5, 4,
+    ])
+  })
+
+  it('mixes several mistakes and lists their operations', () => {
+    const config = buildReviewConfig(
+      [
+        makePattern({ operation: 'multiplication', difficulty: 2 }),
+        makePattern({
+          operation: 'addition',
+          firstOperand: 2,
+          secondOperand: 3,
+          correctAnswer: 5,
+          difficulty: 1,
+        }),
+      ],
+      'continuous',
+    )!
+
+    expect(config.reviewPatterns).toHaveLength(2)
+    expect(config.operations).toEqual(['addition', 'multiplication'])
+    expect(config.difficulty).toBe(2)
   })
 })

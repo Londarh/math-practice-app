@@ -1,6 +1,8 @@
 import { screen, within } from '@testing-library/react'
 import type { UserEvent } from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { STORAGE_KEYS } from '../services/storageService'
+import { makePattern } from '../test/fixtures'
 import { renderAppAt } from '../test/renderWithRouter'
 import type { PracticeAttempt, SessionResult } from '../types/session'
 
@@ -57,6 +59,22 @@ const result: SessionResult = {
   ],
 }
 
+/** Two unmastered mistakes saved from earlier practice. */
+function seedMistakes() {
+  localStorage.setItem(
+    STORAGE_KEYS.mistakePatterns,
+    JSON.stringify([
+      makePattern(),
+      makePattern({
+        operation: 'division',
+        firstOperand: 56,
+        secondOperand: 7,
+        correctAnswer: 8,
+      }),
+    ]),
+  )
+}
+
 function renderSummary(data: SessionResult = result) {
   return renderAppAt({ pathname: '/practice/summary', state: { result: data } })
 }
@@ -107,6 +125,7 @@ describe('SessionSummaryPage', () => {
   })
 
   it('offers all five next steps', () => {
+    seedMistakes()
     renderSummary()
     const actions = within(
       screen.getByRole('navigation', { name: "What's next" }),
@@ -127,7 +146,9 @@ describe('SessionSummaryPage', () => {
     expect(
       actions.getByRole('link', { name: 'Return Home' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('2 questions to try again.')).toBeInTheDocument()
+    expect(
+      screen.getByText('2 mistakes to practice with similar questions.'),
+    ).toBeInTheDocument()
   })
 
   it('Practice Again starts a new session with the same options', async () => {
@@ -140,16 +161,30 @@ describe('SessionSummaryPage', () => {
     expect(screen.getByText('Level 2: Easy')).toBeInTheDocument()
   })
 
-  it('Practice Mistakes replays the questions marked wrong', async () => {
+  it('disables Practice Mistakes when every mistake is mastered', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.mistakePatterns,
+      JSON.stringify([makePattern({ mastered: true, similarCorrectCount: 3 })]),
+    )
+    renderSummary()
+
+    expect(
+      screen.getByRole('button', { name: 'Practice Mistakes' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText('No mistakes to practice. Awesome!'),
+    ).toBeInTheDocument()
+  })
+
+  it('Practice Mistakes starts a review of similar questions', async () => {
+    seedMistakes()
     const { user } = renderSummary()
 
     await user.click(screen.getByRole('button', { name: 'Practice Mistakes' }))
 
     expect(h1('Practice Mistakes')).toBeInTheDocument()
-    expect(screen.getByText('Question 1 of 2')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
-      '7 × 8 = ?',
-    )
+    expect(screen.getByText('Mistake review')).toBeInTheDocument()
+    expect(screen.getByText('Question 1 of 5')).toBeInTheDocument()
   })
 
   it('Change Settings opens setup with the same options filled in', async () => {
@@ -196,36 +231,44 @@ describe('full practice flow', () => {
     await user.click(screen.getByRole('radio', { name: '5 questions' }))
     await user.click(screen.getByRole('button', { name: 'Start Session' }))
 
-    const missed: string[] = []
+    // Miss exactly one question, so exactly one mistake pattern is made.
+    let missed = ''
     for (let i = 0; i < 5; i++) {
-      const correct = i % 2 === 0
-      if (!correct) {
-        missed.push(screen.getByRole('heading', { level: 2 }).textContent!)
+      if (i === 1) {
+        missed = screen.getByRole('heading', { level: 2 }).textContent!
       }
-      await answer(user, correct)
+      await answer(user, i !== 1)
     }
 
     expect(h1('Session Summary')).toBeInTheDocument()
-    expect(stat('Correct answers')).toHaveTextContent('3')
-    expect(stat('Incorrect answers')).toHaveTextContent('2')
+    expect(stat('Correct answers')).toHaveTextContent('4')
+    expect(stat('Incorrect answers')).toHaveTextContent('1')
+    expect(
+      screen.getByText('1 mistake to practice with similar questions.'),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Practice Mistakes' }))
 
-    const unique = [...new Set(missed)]
-    expect(
-      screen.getByText(`Question 1 of ${unique.length}`),
-    ).toBeInTheDocument()
-    for (const text of unique) {
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(text)
-      await answer(user, true)
-    }
+    expect(h1('Practice Mistakes')).toBeInTheDocument()
+    expect(screen.getByText('Question 1 of 5')).toBeInTheDocument()
+    // A similar question, not a replay of the one that was missed.
+    expect(screen.getByRole('heading', { level: 2 }).textContent).not.toBe(
+      missed,
+    )
+    for (let i = 0; i < 5; i++) await answer(user, true)
 
     expect(h1('Session Summary')).toBeInTheDocument()
-    expect(stat('Mistake-review questions completed')).toHaveTextContent(
-      String(unique.length),
-    )
+    expect(stat('Mistake-review questions completed')).toHaveTextContent('5')
+    expect(
+      stat('Mistake-review questions answered correctly'),
+    ).toHaveTextContent('5')
+    // Three right answers (the default threshold) mastered the mistake.
     expect(
       screen.getByRole('button', { name: 'Practice Mistakes' }),
     ).toBeDisabled()
+    const [pattern] = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.mistakePatterns)!,
+    )
+    expect(pattern).toMatchObject({ similarCorrectCount: 5, mastered: true })
   })
 })
