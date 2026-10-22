@@ -1,0 +1,79 @@
+.button {
+  --button-bg: var(--color-primary);
+  --button-shade: var(--color-primary-dark);
+  --button-text: var(--color-on-color);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-height: var(--button-min-height);
+  padding: var(--space-sm) var(--space-lg);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--button-bg);
+  color: var(--button-text);
+  box-shadow: 0 5px 0 var(--button-shade);
+  font: inherit;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    filter var(--transition-fast);
+}
+
+.button--lg {
+  min-height: var(--button-min-height-lg);
+  padding: var(--space-md) var(--space-xl);
+  font-size: var(--font-size-lg);
+}
+
+.button--success {
+  --button-bg: var(--color-success);
+  --button-shade: var(--color-success-dark);
+}
+
+.button--purple {
+  --button-bg: var(--color-purple);
+  --button-shade: var(--color-purple-dark);
+}
+
+.button--secondary {
+  --button-bg: var(--color-surface);
+  --button-shade: var(--color-border);
+  --button-text: var(--color-text);
+
+  border: 3px solid var(--color-border);
+}
+
+.button__icon {
+  font-size: 1.3em;
+  line-height: 1;
+}
+
+.button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 var(--button-shade);
+}
+
+.button:focus-visible {
+  box-shadow:
+    0 5px 0 var(--button-shade),
+    var(--focus-ring);
+}
+
+.button:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--button-shade);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  opacity: 0.6;
+  transform: none;
+}
