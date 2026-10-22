@@ -1,0 +1,150 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
+import { describe, expect, it } from 'vitest'
+import { PracticeSetupPage } from './PracticeSetupPage'
+
+/** Stands in for the session page and shows the config it received. */
+function SessionProbe() {
+  const location = useLocation()
+  return <pre data-testid="received">{JSON.stringify(location.state)}</pre>
+}
+
+function renderSetup(state?: unknown) {
+  return {
+    user: userEvent.setup(),
+    ...render(
+      <MemoryRouter initialEntries={[{ pathname: '/practice/setup', state }]}>
+        <Routes>
+          <Route path="/practice/setup" element={<PracticeSetupPage />} />
+          <Route path="/practice/session" element={<SessionProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    ),
+  }
+}
+
+describe('PracticeSetupPage', () => {
+  it('shows all operation, difficulty and length options', () => {
+    renderSetup()
+
+    for (const name of [
+      'Addition',
+      'Subtraction',
+      'Multiplication',
+      'Division',
+      'Mixed: all operations',
+    ]) {
+      expect(screen.getByRole('checkbox', { name })).toBeInTheDocument()
+    }
+    for (const name of [
+      /Beginner/,
+      /Easy/,
+      /Intermediate/,
+      /Advanced/,
+      '5 questions',
+      '10 questions',
+      '20 questions',
+      'Continuous',
+    ]) {
+      expect(screen.getByRole('radio', { name })).toBeInTheDocument()
+    }
+  })
+
+  it('starts with sensible defaults', () => {
+    renderSetup()
+
+    expect(screen.getByRole('checkbox', { name: 'Addition' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /Beginner/ })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '10 questions' })).toBeChecked()
+    expect(screen.getByRole('button', { name: 'Start Session' })).toBeEnabled()
+  })
+
+  it('allows more than one operation to be selected', async () => {
+    const { user } = renderSetup()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Division' }))
+
+    expect(screen.getByRole('checkbox', { name: 'Addition' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Division' })).toBeChecked()
+  })
+
+  it('selects and clears all operations with the mixed shortcut', async () => {
+    const { user } = renderSetup()
+    const mixed = screen.getByRole('checkbox', {
+      name: 'Mixed: all operations',
+    })
+
+    await user.click(mixed)
+    expect(mixed).toBeChecked()
+    expect(
+      screen.getByRole('checkbox', { name: 'Multiplication' }),
+    ).toBeChecked()
+
+    await user.click(mixed)
+    expect(screen.getByRole('checkbox', { name: 'Addition' })).not.toBeChecked()
+  })
+
+  it('allows only one difficulty level', async () => {
+    const { user } = renderSetup()
+
+    await user.click(screen.getByRole('radio', { name: /Advanced/ }))
+
+    expect(screen.getByRole('radio', { name: /Advanced/ })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /Beginner/ })).not.toBeChecked()
+  })
+
+  it('disables Start Session and explains why when no operation is picked', async () => {
+    const { user } = renderSetup()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Addition' }))
+
+    expect(screen.getByRole('button', { name: 'Start Session' })).toBeDisabled()
+    expect(
+      screen.getByText('Pick at least one operation to start.'),
+    ).toBeInTheDocument()
+  })
+
+  it('can be operated with the keyboard', async () => {
+    const { user } = renderSetup()
+
+    screen.getByRole('checkbox', { name: 'Subtraction' }).focus()
+    await user.keyboard(' ')
+
+    expect(screen.getByRole('checkbox', { name: 'Subtraction' })).toBeChecked()
+  })
+
+  it('passes the chosen configuration to the practice session', async () => {
+    const { user } = renderSetup()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Addition' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Multiplication' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Subtraction' }))
+    await user.click(screen.getByRole('radio', { name: /Intermediate/ }))
+    await user.click(screen.getByRole('radio', { name: 'Continuous' }))
+    await user.click(screen.getByRole('button', { name: 'Start Session' }))
+
+    expect(JSON.parse(screen.getByTestId('received').textContent!)).toEqual({
+      config: {
+        operations: ['subtraction', 'multiplication'],
+        difficulty: 3,
+        sessionLength: 'continuous',
+      },
+    })
+  })
+
+  it('pre-fills options and shows a notice passed in router state', () => {
+    renderSetup({
+      config: { operations: ['division'], difficulty: 2, sessionLength: 20 },
+      notice: 'Pick your options first!',
+    })
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Pick your options first!',
+    )
+    expect(screen.getByRole('checkbox', { name: 'Division' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Addition' })).not.toBeChecked()
+    expect(screen.getByRole('radio', { name: /Easy/ })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '20 questions' })).toBeChecked()
+  })
+})

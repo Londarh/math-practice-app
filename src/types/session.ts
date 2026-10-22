@@ -2,6 +2,22 @@ import type { DifficultyLevel, MathOperation, QuestionSource } from './question'
 
 export type SessionLength = number | 'continuous'
 
+/** A question fact to practice again, taken from an earlier mistake. */
+export interface ReviewItem {
+  operation: MathOperation
+  firstOperand: number
+  secondOperand: number
+}
+
+/** The options chosen on the setup page, used to start a practice session. */
+export interface PracticeConfig {
+  operations: MathOperation[]
+  difficulty: DifficultyLevel
+  sessionLength: SessionLength
+  /** When present, the session replays these facts instead of random ones. */
+  reviewItems?: ReviewItem[]
+}
+
 export interface PracticeAttempt {
   id: string
   questionId: string

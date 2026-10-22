@@ -6,5 +6,7 @@
 - Stack: React + TypeScript + Vite, React Router, Vitest + React Testing Library.
 - Follow the folder structure in specification.md section 19.
 - Before saying a phase is done, run `npm run build` and `npm test` and report the results.
-- Do not commit to git unless I ask.
+- After completing each phase: run lint, tests and build; fix any failures;
+  mark the tasks [x] in TODO.md; then git commit with the message
+  "Phase N: <short description>" and git push. Then continue to the next phase.
 - This is Windows; use PowerShell-compatible commands.
