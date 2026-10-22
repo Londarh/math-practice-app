@@ -63,24 +63,24 @@ describe('automated accessibility check (axe-core)', () => {
     ['empty summary', '/practice/summary'],
     ['not found', '/no-such-page'],
   ])('%s page has no violations', async (_name, path) => {
-    renderAppAt(path)
+    await renderAppAt(path)
     await expectNoViolations()
   })
 
   it('statistics with history and mistakes has no violations', async () => {
     seedHistory()
-    renderAppAt('/statistics')
+    await renderAppAt('/statistics')
     await expectNoViolations()
   })
 
   it('setup with mistake review available has no violations', async () => {
     seedHistory()
-    renderAppAt('/practice/setup')
+    await renderAppAt('/practice/setup')
     await expectNoViolations()
   })
 
   it('the question card has no violations on either side', async () => {
-    const { user } = renderAppAt({
+    const { user } = await renderAppAt({
       pathname: '/practice/session',
       state: { config },
     })
@@ -98,7 +98,7 @@ describe('automated accessibility check (axe-core)', () => {
 
   it('open confirmation dialogs have no violations', async () => {
     seedHistory()
-    const { user } = renderAppAt('/statistics')
+    const { user } = await renderAppAt('/statistics')
     await user.click(screen.getByRole('button', { name: 'Reset Statistics' }))
 
     await expectNoViolations()

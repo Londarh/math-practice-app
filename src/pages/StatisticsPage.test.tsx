@@ -58,8 +58,8 @@ function value(container: ReturnType<typeof section>, label: string) {
 }
 
 describe('StatisticsPage', () => {
-  it('shows an empty state for new users', () => {
-    renderAppAt('/statistics')
+  it('shows an empty state for new users', async () => {
+    await renderAppAt('/statistics')
 
     expect(screen.getByText('No practice yet')).toBeInTheDocument()
     expect(
@@ -70,9 +70,9 @@ describe('StatisticsPage', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows overall totals and accuracy', () => {
+  it('shows overall totals and accuracy', async () => {
     seed()
-    renderAppAt('/statistics')
+    await renderAppAt('/statistics')
     const overview = section('All practice')
 
     expect(value(overview, 'Questions attempted')).toHaveTextContent('4')
@@ -81,9 +81,9 @@ describe('StatisticsPage', () => {
     expect(value(overview, 'Accuracy')).toHaveTextContent('75%')
   })
 
-  it('shows one card per operation and per level', () => {
+  it('shows one card per operation and per level', async () => {
     seed()
-    renderAppAt('/statistics')
+    await renderAppAt('/statistics')
 
     const byOperation = section('By operation')
     expect(byOperation.getAllByRole('article')).toHaveLength(4)
@@ -109,9 +109,9 @@ describe('StatisticsPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('lists recent sessions from newest to oldest', () => {
+  it('lists recent sessions from newest to oldest', async () => {
     seed()
-    renderAppAt('/statistics')
+    await renderAppAt('/statistics')
 
     const items = section('Recent sessions').getAllByRole('listitem')
     expect(items).toHaveLength(2)
@@ -125,7 +125,7 @@ describe('StatisticsPage', () => {
 
   it('keeps everything when the reset is cancelled', async () => {
     seed()
-    const { user } = renderAppAt('/statistics')
+    const { user } = await renderAppAt('/statistics')
 
     await user.click(screen.getByRole('button', { name: 'Reset Statistics' }))
     const dialog = screen.getByRole('alertdialog', {
@@ -146,7 +146,7 @@ describe('StatisticsPage', () => {
 
   it('erases history after confirmation but keeps settings', async () => {
     seed()
-    const { user } = renderAppAt('/statistics')
+    const { user } = await renderAppAt('/statistics')
 
     await user.click(screen.getByRole('button', { name: 'Reset Statistics' }))
     await user.click(screen.getByRole('button', { name: 'Yes, erase it' }))
@@ -166,10 +166,10 @@ describe('StatisticsPage', () => {
     ).toBe(4)
   })
 
-  it('does not crash on corrupted statistics and rebuilds them', () => {
+  it('does not crash on corrupted statistics and rebuilds them', async () => {
     seed()
     localStorage.setItem(STORAGE_KEYS.statistics, '{"attempted": "lots"')
-    renderAppAt('/statistics')
+    await renderAppAt('/statistics')
 
     expect(
       value(section('All practice'), 'Questions attempted'),
@@ -207,9 +207,9 @@ describe('StatisticsPage mistake review', () => {
     )
   }
 
-  it('shows an empty state when there are no mistakes', () => {
+  it('shows an empty state when there are no mistakes', async () => {
     seed()
-    renderAppAt('/statistics')
+    await renderAppAt('/statistics')
 
     expect(
       section('Mistake review').getByText(/No mistakes saved yet/),
@@ -219,10 +219,10 @@ describe('StatisticsPage mistake review', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows mistake totals, the most missed operation and facts', () => {
+  it('shows mistake totals, the most missed operation and facts', async () => {
     seed()
     seedMistakes()
-    renderAppAt('/statistics')
+    await renderAppAt('/statistics')
     const mistakes = section('Mistake review')
 
     expect(value(mistakes, 'Mistakes to practice')).toHaveTextContent('2')
@@ -244,7 +244,7 @@ describe('StatisticsPage mistake review', () => {
   it('lists active mistakes with progress, and mastered ones separately', async () => {
     seed()
     seedMistakes()
-    const { user } = renderAppAt('/statistics')
+    const { user } = await renderAppAt('/statistics')
     const details = section('Mistakes to practice')
 
     const active = within(
@@ -276,7 +276,7 @@ describe('StatisticsPage mistake review', () => {
   it('keeps showing saved mistakes after statistics are reset', async () => {
     seed()
     seedMistakes()
-    const { user } = renderAppAt('/statistics')
+    const { user } = await renderAppAt('/statistics')
 
     await user.click(screen.getByRole('button', { name: 'Reset Statistics' }))
     await user.click(screen.getByRole('button', { name: 'Yes, erase it' }))

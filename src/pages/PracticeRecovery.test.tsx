@@ -33,19 +33,19 @@ const storedAttempts = () =>
   JSON.parse(localStorage.getItem(STORAGE_KEYS.attempts) ?? '[]')
 
 /** Unmounts the app and renders it again at the same history entry. */
-function refresh(rendered: ReturnType<typeof renderAppAt>) {
+function refresh(rendered: Awaited<ReturnType<typeof renderAppAt>>) {
   rendered.unmount()
   return renderAppAt(sessionEntry)
 }
 
 describe('session recovery after a refresh', () => {
   it('restores the session, its totals and the current question', async () => {
-    const first = renderAppAt(sessionEntry)
+    const first = await renderAppAt(sessionEntry)
     await answer(first.user, true)
     await answer(first.user, false)
     const current = heading()
 
-    const second = refresh(first)
+    const second = await refresh(first)
 
     expect(screen.getByText('Question 3 of 5')).toBeInTheDocument()
     expect(heading()).toBe(current)
@@ -62,14 +62,14 @@ describe('session recovery after a refresh', () => {
   })
 
   it('restores the selected answer and the flipped card', async () => {
-    const first = renderAppAt(sessionEntry)
+    const first = await renderAppAt(sessionEntry)
     const picked = choices()[2].querySelector(
       '.answer-choice__value',
     )!.textContent!
     await first.user.click(choices()[2])
     await first.user.click(screen.getByRole('button', { name: 'Flip Card' }))
 
-    refresh(first)
+    await refresh(first)
 
     expect(
       screen.getByRole('button', { name: 'I Got It Right' }),
@@ -80,17 +80,17 @@ describe('session recovery after a refresh', () => {
   })
 
   it('restores a selected answer before the flip', async () => {
-    const first = renderAppAt(sessionEntry)
+    const first = await renderAppAt(sessionEntry)
     await first.user.click(choices()[1])
 
-    refresh(first)
+    await refresh(first)
 
     expect(choices()[1]).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Flip Card' })).toBeEnabled()
   })
 
   it('forgets the session once it is complete', async () => {
-    const { user } = renderAppAt(sessionEntry)
+    const { user } = await renderAppAt(sessionEntry)
     for (let i = 0; i < 5; i++) await answer(user)
 
     expect(
@@ -99,10 +99,10 @@ describe('session recovery after a refresh', () => {
     expect(sessionStorage.getItem(ACTIVE_SESSION_KEY)).toBeNull()
   })
 
-  it('starts fresh, without crashing, when the saved data is broken', () => {
+  it('starts fresh, without crashing, when the saved data is broken', async () => {
     sessionStorage.setItem(ACTIVE_SESSION_KEY, '{"locationKey": "default", ')
 
-    renderAppAt(sessionEntry)
+    await renderAppAt(sessionEntry)
 
     expect(screen.getByText('Question 1 of 5')).toBeInTheDocument()
     expect(screen.queryByText(/Welcome back!/)).not.toBeInTheDocument()
@@ -117,7 +117,7 @@ describe('leaving an active session', () => {
     })
 
   it('asks first, and "Keep practicing" stays on the same question', async () => {
-    const { user } = renderAppAt(sessionEntry)
+    const { user } = await renderAppAt(sessionEntry)
     await answer(user)
     const current = heading()
 
@@ -137,14 +137,14 @@ describe('leaving an active session', () => {
   })
 
   it('"End and leave" ends the session and goes where the student chose', async () => {
-    const { user } = renderAppAt(sessionEntry)
+    const { user } = await renderAppAt(sessionEntry)
     await answer(user)
 
     await user.click(statisticsLink())
     await user.click(screen.getByRole('button', { name: 'End and leave' }))
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Statistics' }),
+      await screen.findByRole('heading', { level: 1, name: 'Statistics' }),
     ).toBeInTheDocument()
     const [stored] = JSON.parse(localStorage.getItem(STORAGE_KEYS.sessions)!)
     expect(stored).toMatchObject({ attempted: 1 })
@@ -153,7 +153,7 @@ describe('leaving an active session', () => {
   })
 
   it('also asks when going back in history', async () => {
-    const { user, router } = renderAppAt('/practice/setup')
+    const { user, router } = await renderAppAt('/practice/setup')
     await user.click(screen.getByRole('button', { name: 'Start Session' }))
 
     await router.navigate(-1)
@@ -164,14 +164,14 @@ describe('leaving an active session', () => {
   })
 
   it('does not warn after the session is complete', async () => {
-    const { user } = renderAppAt(sessionEntry)
+    const { user } = await renderAppAt(sessionEntry)
     for (let i = 0; i < 5; i++) await answer(user)
 
     await user.click(statisticsLink())
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Statistics' }),
+      await screen.findByRole('heading', { level: 1, name: 'Statistics' }),
     ).toBeInTheDocument()
   })
 })

@@ -8,8 +8,8 @@ function getMainLink(name: string) {
 }
 
 describe('HomePage', () => {
-  it('shows a welcome message and the three main actions', () => {
-    renderAppAt('/')
+  it('shows a welcome message and the three main actions', async () => {
+    await renderAppAt('/')
 
     expect(screen.getByText(/ready to practice/i)).toBeInTheDocument()
     expect(getMainLink('Start Practice')).toBeInTheDocument()
@@ -22,17 +22,18 @@ describe('HomePage', () => {
     ['View Statistics', 'Statistics'],
     ['Settings', 'Settings'],
   ])('"%s" opens the %s page', async (button, heading) => {
-    const { user } = renderAppAt('/')
+    const { user } = await renderAppAt('/')
 
     await user.click(getMainLink(button))
 
+    // Statistics and Settings load on demand, so wait for the page.
     expect(
-      screen.getByRole('heading', { level: 1, name: heading }),
+      await screen.findByRole('heading', { level: 1, name: heading }),
     ).toBeInTheDocument()
   })
 
   it('can be operated with the keyboard', async () => {
-    const { user } = renderAppAt('/')
+    const { user } = await renderAppAt('/')
 
     await user.tab() // skip link
     await user.tab() // header brand

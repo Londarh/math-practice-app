@@ -11,8 +11,8 @@ const savedSettings = () =>
   DEFAULT_SETTINGS
 
 describe('SettingsPage', () => {
-  it('shows every setting with its default value', () => {
-    renderAppAt('/settings')
+  it('shows every setting with its default value', async () => {
+    await renderAppAt('/settings')
 
     expect(
       screen.getByRole('switch', { name: /Sound effects/ }),
@@ -33,7 +33,7 @@ describe('SettingsPage', () => {
   })
 
   it('saves changes automatically', async () => {
-    const { user } = renderAppAt('/settings')
+    const { user } = await renderAppAt('/settings')
 
     await user.click(screen.getByRole('switch', { name: /Sound effects/ }))
     await user.click(screen.getByRole('checkbox', { name: 'Division' }))
@@ -49,7 +49,7 @@ describe('SettingsPage', () => {
   })
 
   it('saves a new mastery threshold', async () => {
-    const { user } = renderAppAt('/settings')
+    const { user } = await renderAppAt('/settings')
     const input = screen.getByRole('spinbutton', {
       name: /needed to master a mistake/,
     })
@@ -61,7 +61,7 @@ describe('SettingsPage', () => {
   })
 
   it('rejects an out-of-range mastery threshold', async () => {
-    const { user } = renderAppAt('/settings')
+    const { user } = await renderAppAt('/settings')
     const input = screen.getByRole('spinbutton', {
       name: /needed to master a mistake/,
     })
@@ -83,7 +83,7 @@ describe('SettingsPage', () => {
   })
 
   it('never saves an empty list of default operations', async () => {
-    const { user } = renderAppAt('/settings')
+    const { user } = await renderAppAt('/settings')
 
     await user.click(screen.getByRole('checkbox', { name: 'Addition' }))
 
@@ -92,7 +92,7 @@ describe('SettingsPage', () => {
   })
 
   it('uses the saved defaults on the practice setup page', async () => {
-    const { user } = renderAppAt('/settings')
+    const { user } = await renderAppAt('/settings')
 
     await user.click(screen.getByRole('checkbox', { name: 'Multiplication' }))
     await user.click(screen.getByRole('checkbox', { name: 'Addition' }))
@@ -118,7 +118,7 @@ describe('SettingsPage', () => {
 
   it('keeps data when clearing is cancelled', async () => {
     localStorage.setItem(STORAGE_KEYS.attempts, JSON.stringify([makeAttempt()]))
-    const { user } = renderAppAt('/settings')
+    const { user } = await renderAppAt('/settings')
 
     await user.click(
       screen.getByRole('button', { name: 'Clear All Application Data' }),
@@ -138,7 +138,7 @@ describe('SettingsPage', () => {
     localStorage.setItem(STORAGE_KEYS.attempts, JSON.stringify([makeAttempt()]))
     localStorage.setItem(STORAGE_KEYS.sessions, JSON.stringify([makeSession()]))
     localStorage.setItem('someone.else', 'keep')
-    const { user } = renderAppAt('/settings')
+    const { user } = await renderAppAt('/settings')
 
     await user.click(
       screen.getByRole('button', { name: 'Clear All Application Data' }),

@@ -86,15 +86,15 @@ function stat(label: string) {
 const h1 = (name: string) => screen.getByRole('heading', { level: 1, name })
 
 describe('SessionSummaryPage', () => {
-  it('shows a friendly empty state when there is no session data', () => {
-    renderAppAt('/practice/summary')
+  it('shows a friendly empty state when there is no session data', async () => {
+    await renderAppAt('/practice/summary')
 
     expect(h1('Session Summary')).toBeInTheDocument()
     expect(screen.getByText('No session to show yet')).toBeInTheDocument()
   })
 
-  it('shows totals, accuracy, operations, level and review count', () => {
-    renderSummary()
+  it('shows totals, accuracy, operations, level and review count', async () => {
+    await renderSummary()
 
     expect(stat('Questions attempted')).toHaveTextContent('5')
     expect(stat('Correct answers')).toHaveTextContent('3')
@@ -108,8 +108,8 @@ describe('SessionSummaryPage', () => {
     expect(screen.getByText(/You are improving/)).toBeInTheDocument()
   })
 
-  it('shows 0% for a session with no answers', () => {
-    renderSummary({
+  it('shows 0% for a session with no answers', async () => {
+    await renderSummary({
       ...result,
       session: { ...result.session, attempted: 0, correct: 0, incorrect: 0 },
       attempts: [],
@@ -124,9 +124,9 @@ describe('SessionSummaryPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('offers all five next steps', () => {
+  it('offers all five next steps', async () => {
     seedMistakes()
-    renderSummary()
+    await renderSummary()
     const actions = within(
       screen.getByRole('navigation', { name: "What's next" }),
     )
@@ -152,7 +152,7 @@ describe('SessionSummaryPage', () => {
   })
 
   it('Practice Again starts a new session with the same options', async () => {
-    const { user } = renderSummary()
+    const { user } = await renderSummary()
 
     await user.click(screen.getByRole('link', { name: 'Practice Again' }))
 
@@ -161,12 +161,12 @@ describe('SessionSummaryPage', () => {
     expect(screen.getByText('Level 2: Easy')).toBeInTheDocument()
   })
 
-  it('disables Practice Mistakes when every mistake is mastered', () => {
+  it('disables Practice Mistakes when every mistake is mastered', async () => {
     localStorage.setItem(
       STORAGE_KEYS.mistakePatterns,
       JSON.stringify([makePattern({ mastered: true, similarCorrectCount: 3 })]),
     )
-    renderSummary()
+    await renderSummary()
 
     expect(
       screen.getByRole('button', { name: 'Practice Mistakes' }),
@@ -178,7 +178,7 @@ describe('SessionSummaryPage', () => {
 
   it('Practice Mistakes starts a review of similar questions', async () => {
     seedMistakes()
-    const { user } = renderSummary()
+    const { user } = await renderSummary()
 
     await user.click(screen.getByRole('button', { name: 'Practice Mistakes' }))
 
@@ -188,7 +188,7 @@ describe('SessionSummaryPage', () => {
   })
 
   it('Change Settings opens setup with the same options filled in', async () => {
-    const { user } = renderSummary()
+    const { user } = await renderSummary()
 
     await user.click(screen.getByRole('link', { name: 'Change Settings' }))
 
@@ -203,11 +203,14 @@ describe('SessionSummaryPage', () => {
     ['View Statistics', 'Statistics'],
     ['Return Home', 'Hi there, math explorer!'],
   ])('"%s" opens the right page', async (link, heading) => {
-    const { user } = renderSummary()
+    const { user } = await renderSummary()
 
     await user.click(screen.getByRole('link', { name: link }))
 
-    expect(h1(heading)).toBeInTheDocument()
+    // Statistics loads on demand, so wait for the page.
+    expect(
+      await screen.findByRole('heading', { level: 1, name: heading }),
+    ).toBeInTheDocument()
   })
 })
 
@@ -226,7 +229,7 @@ describe('full practice flow', () => {
   }
 
   it('sets up, practices, sees the summary and reviews mistakes', async () => {
-    const { user } = renderAppAt('/practice/setup')
+    const { user } = await renderAppAt('/practice/setup')
 
     await user.click(screen.getByRole('radio', { name: '5 questions' }))
     await user.click(screen.getByRole('button', { name: 'Start Session' }))

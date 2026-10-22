@@ -21,8 +21,8 @@ async function answer(user: UserEvent, correct = true) {
 }
 
 describe('PracticePage', () => {
-  it('sends the student to setup when there is no session config', () => {
-    renderAppAt('/practice/session')
+  it('sends the student to setup when there is no session config', async () => {
+    await renderAppAt('/practice/session')
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Practice Setup' }),
@@ -32,8 +32,8 @@ describe('PracticePage', () => {
     )
   })
 
-  it('redirects when the config is invalid', () => {
-    renderAppAt({
+  it('redirects when the config is invalid', async () => {
+    await renderAppAt({
       pathname: '/practice/session',
       state: { config: { operations: [], difficulty: 9 } },
     })
@@ -43,8 +43,8 @@ describe('PracticePage', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows the first question with the session details', () => {
-    startSession({
+  it('shows the first question with the session details', async () => {
+    await startSession({
       operations: ['division'],
       difficulty: 3,
       sessionLength: 5,
@@ -62,7 +62,7 @@ describe('PracticePage', () => {
   })
 
   it('updates the totals and progress after every answer', async () => {
-    const { user } = startSession({
+    const { user } = await startSession({
       operations: ['addition'],
       difficulty: 1,
       sessionLength: 5,
@@ -84,7 +84,7 @@ describe('PracticePage', () => {
   })
 
   it('resets the selected answer and flip state for the next question', async () => {
-    const { user } = startSession({
+    const { user } = await startSession({
       operations: ['multiplication'],
       difficulty: 2,
       sessionLength: 5,
@@ -102,7 +102,7 @@ describe('PracticePage', () => {
   })
 
   it('goes to the summary after the last question', async () => {
-    const { user } = startSession({
+    const { user } = await startSession({
       operations: ['addition', 'subtraction'],
       difficulty: 2,
       sessionLength: 5,
@@ -123,7 +123,7 @@ describe('PracticePage', () => {
     }
 
     it('has no fixed total or progress bar', async () => {
-      const { user } = startSession(continuous)
+      const { user } = await startSession(continuous)
 
       expect(screen.getByText('Question 1')).toBeInTheDocument()
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
@@ -133,7 +133,7 @@ describe('PracticePage', () => {
     })
 
     it('asks before ending and can keep practicing', async () => {
-      const { user } = startSession(continuous)
+      const { user } = await startSession(continuous)
       await answer(user)
 
       await user.click(screen.getByRole('button', { name: 'End Session' }))
@@ -151,7 +151,7 @@ describe('PracticePage', () => {
     })
 
     it('ends the session and shows the summary when confirmed', async () => {
-      const { user } = startSession(continuous)
+      const { user } = await startSession(continuous)
       await answer(user)
 
       await user.click(screen.getByRole('button', { name: 'End Session' }))
@@ -164,7 +164,7 @@ describe('PracticePage', () => {
   })
 
   it('saves each answer and the session to local storage', async () => {
-    const { user } = startSession({
+    const { user } = await startSession({
       operations: ['multiplication'],
       difficulty: 2,
       sessionLength: 5,
@@ -194,7 +194,7 @@ describe('PracticePage', () => {
       'mathPractice.settings',
       JSON.stringify({ showExplanations: false }),
     )
-    const { user } = startSession({
+    const { user } = await startSession({
       operations: ['addition'],
       difficulty: 1,
       sessionLength: 5,
@@ -230,27 +230,27 @@ describe('PracticePage', () => {
       sessionLength: 5,
     }
 
-    it('turns the card over by default', () => {
+    it('turns the card over by default', async () => {
       stubReducedMotion(false)
-      startSession(config)
+      await startSession(config)
 
       expect(card()).toHaveClass('question-card--animated')
     })
 
-    it('swaps sides without motion when the device asks for reduced motion', () => {
+    it('swaps sides without motion when the device asks for reduced motion', async () => {
       stubReducedMotion(true)
-      startSession(config)
+      await startSession(config)
 
       expect(card()).toHaveClass('question-card--static')
     })
 
-    it('swaps sides without motion when animation is turned off', () => {
+    it('swaps sides without motion when animation is turned off', async () => {
       stubReducedMotion(false)
       localStorage.setItem(
         'mathPractice.settings',
         JSON.stringify({ cardAnimationEnabled: false }),
       )
-      startSession(config)
+      await startSession(config)
 
       expect(card()).toHaveClass('question-card--static')
     })

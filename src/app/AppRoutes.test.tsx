@@ -11,8 +11,8 @@ describe('AppRoutes', () => {
     ['/practice/summary', 'Session Summary'],
     ['/statistics', 'Statistics'],
     ['/settings', 'Settings'],
-  ])('renders the page for %s', (path, heading) => {
-    renderAppAt(path)
+  ])('renders the page for %s', async (path, heading) => {
+    await renderAppAt(path)
 
     expect(
       screen.getByRole('heading', { level: 1, name: heading }),
@@ -20,7 +20,7 @@ describe('AppRoutes', () => {
   })
 
   it('shows a fallback page for unknown routes', async () => {
-    const { user } = renderAppAt('/no-such-page')
+    const { user } = await renderAppAt('/no-such-page')
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Page not found' }),
@@ -36,8 +36,8 @@ describe('AppRoutes', () => {
     ).toBeInTheDocument()
   })
 
-  it('marks the current page in the navigation', () => {
-    renderAppAt('/statistics')
+  it('marks the current page in the navigation', async () => {
+    await renderAppAt('/statistics')
 
     const nav = screen.getByRole('navigation', { name: 'Main' })
     const current = nav.querySelector('[aria-current="page"]')

@@ -39,7 +39,7 @@ const stored = <T,>(key: string): T =>
 describe('integration: a wrong answer becomes mistake review', () => {
   it('start → answer wrong → stats update → mistake stored → similar question', async () => {
     // 1. Start a practice session.
-    const { user } = renderAppAt('/practice/setup')
+    const { user } = await renderAppAt('/practice/setup')
     await user.click(screen.getByRole('checkbox', { name: 'Addition' }))
     await user.click(screen.getByRole('checkbox', { name: 'Multiplication' }))
     await user.click(screen.getByRole('radio', { name: /Easy/ }))
@@ -55,6 +55,7 @@ describe('integration: a wrong answer becomes mistake review', () => {
 
     // 5. Statistics update.
     await user.click(screen.getByRole('link', { name: 'View Statistics' }))
+    await screen.findByRole('heading', { level: 1, name: 'Statistics' })
     const overall = region('All practice')
     expect(value(overall, 'Questions attempted')).toHaveTextContent('5')
     expect(value(overall, 'Correct answers')).toHaveTextContent('4')
@@ -123,7 +124,7 @@ describe('integration: a wrong answer becomes mistake review', () => {
 
 describe('integration: other sessions', () => {
   it('a mixed-operation session practices several operations', async () => {
-    const { user } = renderAppAt('/practice/setup')
+    const { user } = await renderAppAt('/practice/setup')
     await user.click(
       screen.getByRole('checkbox', { name: 'Mixed: all operations' }),
     )
@@ -145,7 +146,7 @@ describe('integration: other sessions', () => {
   })
 
   it('a whole session can be completed with the keyboard only', async () => {
-    const { user } = renderAppAt('/practice/setup')
+    const { user } = await renderAppAt('/practice/setup')
 
     /** Presses Tab until the given control has focus. */
     async function tabTo(target: HTMLElement) {
