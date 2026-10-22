@@ -8,6 +8,7 @@ import type {
   PracticeAttempt,
   PracticeConfig,
   PracticeSession,
+  ReviewItem,
 } from '../types/session'
 import { createId } from '../utils/ids'
 
@@ -233,4 +234,24 @@ export function usePracticeSession(config: PracticeConfig) {
     recordResult,
     endSession,
   }
+}
+
+/** The facts marked wrong in a session, without duplicates, in order. */
+export function reviewItemsFromAttempts(
+  attempts: readonly PracticeAttempt[],
+): ReviewItem[] {
+  const seen = new Set<string>()
+  const items: ReviewItem[] = []
+  for (const attempt of attempts) {
+    if (attempt.selfReportedCorrect) continue
+    const key = `${attempt.operation}:${attempt.firstOperand}:${attempt.secondOperand}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    items.push({
+      operation: attempt.operation,
+      firstOperand: attempt.firstOperand,
+      secondOperand: attempt.secondOperand,
+    })
+  }
+  return items
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeAnswer, randomInt, randomItem } from './math'
+import { calculateAccuracy, computeAnswer, randomInt, randomItem } from './math'
 
 describe('randomInt', () => {
   it('returns the minimum and maximum at the edges of the random range', () => {
@@ -49,5 +49,18 @@ describe('computeAnswer', () => {
 
   it('returns NaN instead of dividing by zero', () => {
     expect(computeAnswer('division', 5, 0)).toBeNaN()
+  })
+})
+
+describe('calculateAccuracy', () => {
+  it('returns a rounded percentage', () => {
+    expect(calculateAccuracy(7, 10)).toBe(70)
+    expect(calculateAccuracy(2, 3)).toBe(67)
+    expect(calculateAccuracy(5, 5)).toBe(100)
+    expect(calculateAccuracy(0, 4)).toBe(0)
+  })
+
+  it('returns 0 when nothing was attempted', () => {
+    expect(calculateAccuracy(0, 0)).toBe(0)
   })
 })

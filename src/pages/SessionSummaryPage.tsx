@@ -1,16 +1,95 @@
-import { ButtonLink } from '../components/common/Button'
+import { useLocation, useNavigate } from 'react-router'
+import { Button, ButtonLink } from '../components/common/Button'
 import { EmptyState } from '../components/common/EmptyState'
 import { PageContainer } from '../components/layout/PageContainer'
+import { SessionSummary } from '../components/practice/SessionSummary'
+import { reviewItemsFromAttempts } from '../hooks/usePracticeSession'
+import type { PracticeConfig } from '../types/session'
+import { parseSessionResult } from '../utils/validation'
+import './SessionSummaryPage.css'
 
 export function SessionSummaryPage() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const result = parseSessionResult(
+    (location.state as { result?: unknown } | null)?.result,
+  )
+
+  if (!result) {
+    return (
+      <PageContainer title="Session Summary">
+        <EmptyState icon="🏁" title="No session to show yet">
+          <p>Finish a practice session and your results will appear here.</p>
+          <ButtonLink to="/practice/setup" variant="success" icon="🚀">
+            Start Practice
+          </ButtonLink>
+        </EmptyState>
+      </PageContainer>
+    )
+  }
+
+  const { config, attempts } = result
+  const reviewItems = reviewItemsFromAttempts(attempts)
+  // "Change Settings" goes back to normal practice, not a review replay.
+  const setupConfig: PracticeConfig = {
+    operations: config.operations,
+    difficulty: config.difficulty,
+    sessionLength: config.sessionLength,
+  }
+
+  function practiceMistakes() {
+    const reviewConfig: PracticeConfig = { ...setupConfig, reviewItems }
+    navigate('/practice/session', { state: { config: reviewConfig } })
+  }
+
   return (
     <PageContainer title="Session Summary">
-      <EmptyState icon="🏁" title="Coming soon!">
-        <p>After a practice session, you will see how you did here.</p>
-        <ButtonLink to="/" variant="secondary">
-          Back to Home
-        </ButtonLink>
-      </EmptyState>
+      <div className="summary-page">
+        <SessionSummary result={result} />
+
+        <nav className="summary-page__actions" aria-label="What's next">
+          <ButtonLink
+            to="/practice/session"
+            state={{ config }}
+            variant="success"
+            size="lg"
+            icon="🔄"
+          >
+            Practice Again
+          </ButtonLink>
+          <div className="summary-page__mistakes">
+            <Button
+              variant="purple"
+              size="lg"
+              icon="🎯"
+              disabled={reviewItems.length === 0}
+              aria-describedby="summary-mistakes-note"
+              onClick={practiceMistakes}
+            >
+              Practice Mistakes
+            </Button>
+            <p id="summary-mistakes-note" className="summary-page__note">
+              {reviewItems.length === 0
+                ? 'No mistakes to practice. Awesome!'
+                : `${reviewItems.length} ${reviewItems.length === 1 ? 'question' : 'questions'} to try again.`}
+            </p>
+          </div>
+          <ButtonLink
+            to="/practice/setup"
+            state={{ config: setupConfig }}
+            variant="primary"
+            icon="🛠️"
+          >
+            Change Settings
+          </ButtonLink>
+          <ButtonLink to="/statistics" variant="primary" icon="📊">
+            View Statistics
+          </ButtonLink>
+          <ButtonLink to="/" variant="secondary" icon="🏠">
+            Return Home
+          </ButtonLink>
+        </nav>
+      </div>
     </PageContainer>
   )
 }

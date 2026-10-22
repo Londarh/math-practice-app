@@ -44,3 +44,9 @@ export function computeAnswer(
       return second === 0 ? NaN : first / second
   }
 }
+
+/** correct / attempted × 100, rounded; 0 when nothing was attempted. */
+export function calculateAccuracy(correct: number, attempted: number): number {
+  if (attempted <= 0) return 0
+  return Math.round((correct / attempted) * 100)
+}

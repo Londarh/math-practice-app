@@ -9,9 +9,11 @@ import type {
   Question,
 } from '../types/question'
 import type {
+  PracticeAttempt,
   PracticeConfig,
   ReviewItem,
   SessionLength,
+  SessionResult,
 } from '../types/session'
 import { ALL_DIFFICULTIES, ALL_OPERATIONS } from './labels'
 import { computeAnswer } from './math'
@@ -149,4 +151,38 @@ export function validateQuestion(
     errors.push('Negative answer choices are not allowed at this level')
   }
   return errors
+}
+
+const isCount = (value: unknown) =>
+  Number.isInteger(value) && Number(value) >= 0
+
+function isAttempt(value: unknown): value is PracticeAttempt {
+  return (
+    isRecord(value) &&
+    typeof value.questionId === 'string' &&
+    isMathOperation(value.operation) &&
+    Number.isInteger(value.firstOperand) &&
+    Number.isInteger(value.secondOperand) &&
+    Number.isInteger(value.correctAnswer) &&
+    typeof value.selfReportedCorrect === 'boolean' &&
+    (value.source === 'regular' || value.source === 'mistake-review')
+  )
+}
+
+/** Checks the finished-session data handed to the summary page. */
+export function parseSessionResult(value: unknown): SessionResult | null {
+  if (!isRecord(value)) return null
+  const config = parsePracticeConfig(value.config)
+  const { session, attempts } = value
+  if (!config || !isRecord(session) || !Array.isArray(attempts)) return null
+  if (
+    typeof session.id !== 'string' ||
+    !isCount(session.attempted) ||
+    !isCount(session.correct) ||
+    !isCount(session.incorrect) ||
+    !attempts.every(isAttempt)
+  ) {
+    return null
+  }
+  return value as unknown as SessionResult
 }
