@@ -198,12 +198,18 @@ export function practiceSessionReducer(
   }
 }
 
-/** Runs one practice session: the current question, totals and attempts. */
-export function usePracticeSession(config: PracticeConfig) {
+/**
+ * Runs one practice session: the current question, totals and attempts.
+ * Pass `restored` to continue a session saved before a page refresh.
+ */
+export function usePracticeSession(
+  config: PracticeConfig,
+  restored?: PracticeSessionState | null,
+) {
   const [state, dispatch] = useReducer(
     practiceSessionReducer,
     config,
-    createInitialState,
+    (initialConfig) => restored ?? createInitialState(initialConfig),
   )
 
   const recordResult = useCallback(
@@ -246,6 +252,8 @@ export function usePracticeSession(config: PracticeConfig) {
 
   return {
     ...state,
+    /** The whole state, e.g. for saving it so a refresh can restore it. */
+    state,
     totalQuestions: sessionTotal(state.config),
     recordResult,
     endSession,

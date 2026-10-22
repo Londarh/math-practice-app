@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router'
+import type { RouteObject } from 'react-router'
 import { Layout } from '../components/layout/Layout'
 import { HomePage } from '../pages/HomePage'
 import { NotFoundPage } from '../pages/NotFoundPage'
@@ -8,18 +8,22 @@ import { SessionSummaryPage } from '../pages/SessionSummaryPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { StatisticsPage } from '../pages/StatisticsPage'
 
-export function AppRoutes() {
-  return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<HomePage />} />
-        <Route path="practice/setup" element={<PracticeSetupPage />} />
-        <Route path="practice/session" element={<PracticePage />} />
-        <Route path="practice/summary" element={<SessionSummaryPage />} />
-        <Route path="statistics" element={<StatisticsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
-  )
-}
+/**
+ * The app's routes. Used with a data router (createBrowserRouter in the app,
+ * createMemoryRouter in tests), which the practice page needs to ask before
+ * the student leaves an active session.
+ */
+export const appRoutes: RouteObject[] = [
+  {
+    element: <Layout />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: 'practice/setup', element: <PracticeSetupPage /> },
+      { path: 'practice/session', element: <PracticePage /> },
+      { path: 'practice/summary', element: <SessionSummaryPage /> },
+      { path: 'statistics', element: <StatisticsPage /> },
+      { path: 'settings', element: <SettingsPage /> },
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
+]

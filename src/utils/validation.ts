@@ -353,3 +353,21 @@ export function parseSessionResult(value: unknown): SessionResult | null {
   }
   return value as unknown as SessionResult
 }
+
+/** Checks a question restored from storage, including the spec 18 rules. */
+export function isValidQuestion(value: unknown): value is Question {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    typeof value.displayText !== 'string' ||
+    !Number.isInteger(value.firstOperand) ||
+    !Number.isInteger(value.secondOperand) ||
+    !Array.isArray(value.choices) ||
+    (value.source !== 'regular' && value.source !== 'mistake-review') ||
+    (value.mistakePatternId !== undefined &&
+      typeof value.mistakePatternId !== 'string')
+  ) {
+    return false
+  }
+  return validateQuestion(value as unknown as Question).length === 0
+}

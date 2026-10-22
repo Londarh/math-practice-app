@@ -16,6 +16,11 @@ interface QuestionCardProps {
   /** When false the card swaps sides instantly instead of turning over. */
   animate?: boolean
   showExplanation?: boolean
+  /** Restores the answer and side after a page refresh. */
+  initialSelectedAnswer?: number | null
+  initialFlipped?: boolean
+  /** Told whenever the selected answer or the visible side changes. */
+  onCardStateChange?: (selectedAnswer: number | null, flipped: boolean) => void
 }
 
 /**
@@ -29,9 +34,20 @@ export function QuestionCard({
   onResult,
   animate = true,
   showExplanation = true,
+  initialSelectedAnswer = null,
+  initialFlipped = false,
+  onCardStateChange,
 }: QuestionCardProps) {
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
-  const [isCardFlipped, setIsCardFlipped] = useState(false)
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(
+    initialSelectedAnswer,
+  )
+  const [isCardFlipped, setIsCardFlipped] = useState(
+    initialFlipped && initialSelectedAnswer !== null,
+  )
+
+  useEffect(() => {
+    onCardStateChange?.(selectedAnswer, isCardFlipped)
+  }, [selectedAnswer, isCardFlipped, onCardStateChange])
   const frontHeading = useRef<HTMLHeadingElement>(null)
   const backHeading = useRef<HTMLHeadingElement>(null)
 

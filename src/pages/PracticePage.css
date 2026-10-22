@@ -33,3 +33,14 @@
   display: flex;
   justify-content: center;
 }
+
+.practice-page__notice {
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: var(--space-sm) var(--space-lg);
+  border-left: 8px solid var(--color-sun);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-weight: var(--font-weight-bold);
+}
