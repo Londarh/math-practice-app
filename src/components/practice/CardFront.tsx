@@ -27,18 +27,20 @@ export function CardFront({
   headingRef,
 }: CardFrontProps) {
   const { operation, firstOperand, secondOperand } = question
+  const progress =
+    totalQuestions === null
+      ? `Question ${questionNumber}`
+      : `Question ${questionNumber} of ${totalQuestions}`
   return (
     <>
-      <p className="question-card__count">
-        {totalQuestions === null
-          ? `Question ${questionNumber}`
-          : `Question ${questionNumber} of ${totalQuestions}`}
-      </p>
+      <p className="question-card__count">{progress}</p>
       <h2
         ref={headingRef}
         className="question-card__problem"
         tabIndex={-1}
-        aria-label={spokenQuestionText(operation, firstOperand, secondOperand)}
+        // Focus moves here for each new question, so this is what screen
+        // readers announce: the progress and the question in words.
+        aria-label={`${progress}: ${spokenQuestionText(operation, firstOperand, secondOperand)}`}
       >
         {question.displayText}
       </h2>
@@ -47,10 +49,11 @@ export function CardFront({
         role="group"
         aria-label="Answer choices"
       >
-        {question.choices.map((choice) => (
+        {question.choices.map((choice, index) => (
           <AnswerChoice
             key={choice}
             value={choice}
+            shortcut={index + 1}
             selected={choice === selectedAnswer}
             disabled={isFlipped}
             onSelect={onSelect}
@@ -68,7 +71,9 @@ export function CardFront({
           Flip Card
         </Button>
         {selectedAnswer === null && (
-          <p className="question-card__hint">Pick an answer, then flip!</p>
+          <p className="question-card__hint">
+            Pick an answer (or press 1–4), then flip!
+          </p>
         )}
       </div>
     </>

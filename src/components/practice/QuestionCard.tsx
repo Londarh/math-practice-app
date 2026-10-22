@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Question } from '../../types/question'
+import { isTypingTarget } from '../../utils/keyboard'
 import { formatNumber } from '../../utils/labels'
 import { CardBack } from './CardBack'
 import { CardFront } from './CardFront'
@@ -39,6 +40,24 @@ export function QuestionCard({
     const target = isCardFlipped ? backHeading.current : frontHeading.current
     target?.focus({ preventScroll: true })
   }, [isCardFlipped])
+
+  // Number keys 1–4 pick an answer while the front is showing.
+  useEffect(() => {
+    if (isCardFlipped) return
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.ctrlKey || event.altKey) return
+      if (event.metaKey || isTypingTarget(event.target)) return
+      // Leave keys alone while a dialog (e.g. "End this session?") is open.
+      if (document.querySelector('[aria-modal="true"]')) return
+      if (!/^[1-9]$/.test(event.key)) return
+      const choice = question.choices[Number(event.key) - 1]
+      if (choice === undefined) return
+      event.preventDefault()
+      setSelectedAnswer(choice)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isCardFlipped, question.choices])
 
   function handleSelect(value: number) {
     if (!isCardFlipped) setSelectedAnswer(value)

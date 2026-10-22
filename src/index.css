@@ -11,7 +11,7 @@
 
   --color-primary: #1f6fd1;
   --color-primary-dark: #154f99;
-  --color-success: #1b8a4b;
+  --color-success: #177a42;
   --color-success-dark: #12633a;
   --color-purple: #7a3fd8;
   --color-purple-dark: #5a2aa5;
@@ -95,8 +95,14 @@ a {
   color: var(--color-primary-dark);
 }
 
+/*
+ * Focus ring on every interactive element. The transparent outline is
+ * invisible normally but becomes a solid line in Windows high-contrast mode,
+ * which removes box-shadows.
+ */
 :focus-visible {
-  outline: none;
+  outline: 3px solid transparent;
+  outline-offset: 2px;
   box-shadow: var(--focus-ring);
 }
 

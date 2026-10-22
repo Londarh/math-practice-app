@@ -7,6 +7,7 @@ import { PageContainer } from '../components/layout/PageContainer'
 import { ProgressBar } from '../components/practice/ProgressBar'
 import { QuestionCard } from '../components/practice/QuestionCard'
 import { useAppData } from '../hooks/useAppData'
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import { usePracticeSession } from '../hooks/usePracticeSession'
 import type { PracticeConfig, SessionResult } from '../types/session'
 import { DIFFICULTY_LABELS, OPERATION_LABELS } from '../utils/labels'
@@ -49,6 +50,9 @@ function PracticeSession({ config }: { config: PracticeConfig }) {
     endSession,
   } = usePracticeSession(config)
   const { recordSessionProgress, settings } = useAppData()
+  // The card turns over only if the setting allows it and the device has
+  // not asked for reduced motion; otherwise the sides simply swap.
+  const reducedMotion = usePrefersReducedMotion()
   const [confirmingEnd, setConfirmingEnd] = useState(false)
   const isReview = Boolean(config.reviewPatterns)
 
@@ -116,7 +120,7 @@ function PracticeSession({ config }: { config: PracticeConfig }) {
             if (settings.soundEnabled) playResultSound(correct)
             recordResult(selectedAnswer, correct)
           }}
-          animate={settings.cardAnimationEnabled}
+          animate={settings.cardAnimationEnabled && !reducedMotion}
           showExplanation={settings.showExplanations}
         />
 

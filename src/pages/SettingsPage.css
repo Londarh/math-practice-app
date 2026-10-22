@@ -129,7 +129,7 @@
 
 .settings-field__input:focus-visible {
   border-color: var(--color-primary);
-  outline: none;
+  outline: 3px solid transparent;
   box-shadow: var(--focus-ring);
 }
 

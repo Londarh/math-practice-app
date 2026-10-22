@@ -90,7 +90,8 @@
   overflow-wrap: anywhere;
 }
 
-.question-card__problem:focus {
+/* Focus is moved here by code; only show a ring for keyboard users. */
+.question-card__problem:focus:not(:focus-visible) {
   outline: none;
 }
 
@@ -149,6 +150,22 @@
 
 .answer-choice:disabled {
   cursor: default;
+}
+
+/* Keyboard shortcut number, shown in the corner of each choice. */
+.answer-choice__key {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  display: grid;
+  place-items: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .answer-choice__check {

@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import type { UserEvent } from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderAppAt } from '../test/renderWithRouter'
 import type { PracticeConfig } from '../types/session'
 
@@ -208,5 +208,52 @@ describe('PracticePage', () => {
     await user.click(screen.getByRole('button', { name: 'Flip Card' }))
 
     expect(screen.queryByText(/Check it backwards/)).not.toBeInTheDocument()
+  })
+
+  describe('card animation', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    function stubReducedMotion(reduce: boolean) {
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: reduce && query.includes('prefers-reduced-motion'),
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }))
+    }
+
+    const card = () => screen.getByRole('region', { name: 'Question card' })
+    const config: PracticeConfig = {
+      operations: ['addition'],
+      difficulty: 1,
+      sessionLength: 5,
+    }
+
+    it('turns the card over by default', () => {
+      stubReducedMotion(false)
+      startSession(config)
+
+      expect(card()).toHaveClass('question-card--animated')
+    })
+
+    it('swaps sides without motion when the device asks for reduced motion', () => {
+      stubReducedMotion(true)
+      startSession(config)
+
+      expect(card()).toHaveClass('question-card--static')
+    })
+
+    it('swaps sides without motion when animation is turned off', () => {
+      stubReducedMotion(false)
+      localStorage.setItem(
+        'mathPractice.settings',
+        JSON.stringify({ cardAnimationEnabled: false }),
+      )
+      startSession(config)
+
+      expect(card()).toHaveClass('question-card--static')
+    })
   })
 })

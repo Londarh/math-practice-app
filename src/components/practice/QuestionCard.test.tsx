@@ -40,7 +40,9 @@ describe('QuestionCard front', () => {
 
     expect(screen.getByText('Question 3 of 10')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: '7 times 8 equals what?' }),
+      screen.getByRole('heading', {
+        name: 'Question 3 of 10: 7 times 8 equals what?',
+      }),
     ).toHaveTextContent('7 × 8 = ?')
     for (const value of question.choices) {
       expect(choice(value)).toHaveAttribute('aria-pressed', 'false')
@@ -180,5 +182,77 @@ describe('QuestionCard reset', () => {
 
     expect(choice(56)).toHaveAttribute('aria-pressed', 'false')
     expect(flipButton()).toBeDisabled()
+  })
+})
+
+describe('QuestionCard keyboard shortcuts', () => {
+  it('selects answers with the number keys 1–4', async () => {
+    const { user } = renderCard()
+
+    await user.keyboard('2')
+    expect(choice(54)).toHaveAttribute('aria-pressed', 'true')
+
+    await user.keyboard('4')
+    expect(choice(64)).toHaveAttribute('aria-pressed', 'true')
+    expect(choice(54)).toHaveAttribute('aria-pressed', 'false')
+    expect(flipButton()).toBeEnabled()
+  })
+
+  it('shows each shortcut and exposes it to assistive technology', () => {
+    renderCard()
+
+    question.choices.forEach((value, index) => {
+      expect(choice(value)).toHaveAttribute(
+        'aria-keyshortcuts',
+        String(index + 1),
+      )
+      expect(choice(value)).toHaveTextContent(String(index + 1))
+    })
+  })
+
+  it('ignores other keys and keys with modifiers', async () => {
+    const { user } = renderCard()
+
+    await user.keyboard('5')
+    await user.keyboard('{Control>}1{/Control}')
+
+    for (const value of question.choices) {
+      expect(choice(value)).toHaveAttribute('aria-pressed', 'false')
+    }
+  })
+
+  it('does not interfere with typing in a form field', async () => {
+    const { user } = renderCard()
+    render(<input aria-label="Notes" />)
+
+    await user.click(screen.getByRole('textbox', { name: 'Notes' }))
+    await user.keyboard('3')
+
+    expect(screen.getByRole('textbox', { name: 'Notes' })).toHaveValue('3')
+    expect(choice(56)).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('cannot change the answer after the card is flipped', async () => {
+    const { user } = renderCard()
+    await user.keyboard('1')
+    await user.click(flipButton())
+
+    await user.keyboard('3')
+
+    expect(screen.getByText('Your answer').nextSibling).toHaveTextContent('48')
+  })
+
+  it('can be answered with the keyboard alone', async () => {
+    const { user, onResult } = renderCard()
+
+    await user.keyboard('3')
+    flipButton().focus()
+    await user.keyboard('{Enter}')
+    // Focus moves to the back's heading; Tab reaches "I Got It Right".
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'I Got It Right' })).toHaveFocus()
+    await user.keyboard(' ')
+
+    expect(onResult).toHaveBeenCalledExactlyOnceWith(56, true)
   })
 })
