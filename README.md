@@ -5,7 +5,7 @@ multiplication and division. Students pick an answer, flip the card to see the
 correct one, and say whether they got it right. The app remembers the facts
 they miss and later asks **similar** questions until each one is mastered.
 
-**Live site:** _https://YOUR-SITE-NAME.netlify.app_ (placeholder — replace after deploying)
+**Live site:** (https://mymathapp123.netlify.app/)
 
 Everything runs in the browser. There are no accounts, no server and no
 tracking; progress is saved only on the device being used.
