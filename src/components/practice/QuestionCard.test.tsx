@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Question } from '../../types/question'
+import { MATCH_MESSAGES, SUPPORT_MESSAGES } from '../../utils/feedback'
 import { QuestionCard } from './QuestionCard'
 
 const question: Question = {
@@ -29,6 +30,12 @@ function renderCard(props: Partial<Parameters<typeof QuestionCard>[0]> = {}) {
   )
   return { user: userEvent.setup(), onResult, ...result }
 }
+
+/** Matches any one of the given messages. */
+const anyOf = (messages: string[]) =>
+  new RegExp(
+    messages.map((m) => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+  )
 
 const choice = (value: number) =>
   screen.getByRole('button', { name: `Answer ${value}` })
@@ -100,7 +107,7 @@ describe('QuestionCard back', () => {
       '56',
     )
     expect(screen.getByText('Your answer').nextSibling).toHaveTextContent('54')
-    expect(screen.getByText(/Nice try/)).toBeInTheDocument()
+    expect(screen.getByText(anyOf(SUPPORT_MESSAGES))).toBeInTheDocument()
     expect(screen.getByText(/7 groups of 8 make 56/)).toBeInTheDocument()
   })
 
@@ -110,7 +117,7 @@ describe('QuestionCard back', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'The correct answer is 56. Your answer was 56.',
     )
-    expect(screen.getByText(/Great job/)).toBeInTheDocument()
+    expect(screen.getByText(anyOf(MATCH_MESSAGES))).toBeInTheDocument()
   })
 
   it('hides the front so the answer can no longer change', async () => {

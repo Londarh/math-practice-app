@@ -77,3 +77,15 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Keep the four operation tiles on one row on the narrowest phones. */
+@media (max-width: 400px) {
+  .home-page__tiles {
+    gap: var(--space-sm);
+  }
+
+  .home-page__tile {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+}

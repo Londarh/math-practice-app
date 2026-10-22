@@ -1,6 +1,7 @@
 import { useState, type Ref } from 'react'
 import type { Question } from '../../types/question'
 import { explainQuestion, formatEquation } from '../../utils/explanations'
+import { pickFeedback } from '../../utils/feedback'
 import { formatNumber } from '../../utils/labels'
 import { Button } from '../common/Button'
 
@@ -22,6 +23,11 @@ export function CardBack({
   // Once one button is pressed, both lock so the attempt is recorded once.
   const [reported, setReported] = useState(false)
   const matched = selectedAnswer === question.correctAnswer
+  // The back exists before an answer is chosen, so keep only the random
+  // pick fixed: the message stays the same while shown but still follows
+  // whether the answer matches.
+  const [roll] = useState(Math.random)
+  const feedback = pickFeedback(matched, () => roll)
 
   function report(correct: boolean) {
     if (reported) return
@@ -48,9 +54,8 @@ export function CardBack({
         </div>
       </dl>
       <p className="question-card__feedback">
-        {matched
-          ? '🎉 Great job! Your answer matches.'
-          : '🌱 Nice try! Every mistake helps you learn.'}
+        <span aria-hidden="true">{feedback.icon} </span>
+        {feedback.message}
       </p>
       {showExplanation && (
         <p className="question-card__explanation">

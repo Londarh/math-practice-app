@@ -1,5 +1,7 @@
 /* Shared styles for the option groups on the practice setup page. */
 .setup-group {
+  /* Fieldsets default to min-content width; let them shrink on phones. */
+  min-width: 0;
   margin: 0;
   padding: var(--space-lg);
   border: 0;
