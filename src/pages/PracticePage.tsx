@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useBlocker, useLocation, useNavigate } from 'react-router'
 import { Button, ButtonLink } from '../components/common/Button'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
-import { EmptyState } from '../components/common/EmptyState'
+import { ErrorState } from '../components/common/ErrorState'
 import { PageContainer } from '../components/layout/PageContainer'
 import { ProgressBar } from '../components/practice/ProgressBar'
 import { QuestionCard } from '../components/practice/QuestionCard'
@@ -135,12 +135,17 @@ function PracticeSession({
   if (error && attempts.length === 0) {
     return (
       <PageContainer title="Practice">
-        <EmptyState icon="🤔" title="Something went wrong">
+        <ErrorState>
           <p>{error}</p>
-          <ButtonLink to="/practice/setup" state={{ config }} variant="primary">
+          <ButtonLink
+            to="/practice/setup"
+            state={{ config }}
+            variant="secondary"
+            icon="🛠️"
+          >
             Change Settings
           </ButtonLink>
-        </EmptyState>
+        </ErrorState>
       </PageContainer>
     )
   }

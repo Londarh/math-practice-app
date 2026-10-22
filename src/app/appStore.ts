@@ -16,6 +16,7 @@ import {
   writeSection,
 } from '../services/storageService'
 import type { MistakePattern } from '../types/mistake'
+import { logDevError } from '../utils/devLog'
 import type { PracticeAttempt, PracticeSession } from '../types/session'
 import type { AppSettings } from '../types/settings'
 import type { AppStatistics } from '../types/statistics'
@@ -107,7 +108,10 @@ export function loadAppData(storage: Storage | null = getStorage()): {
   const load = <K extends DataSection>(section: K) => {
     const result = readSection(section, SECTION_PARSERS[section], storage)
     if (result.value !== null) data[section] = result.value
-    if (result.status === 'invalid') warning = STORAGE_MESSAGES.invalid
+    if (result.status === 'invalid') {
+      logDevError(`Stored ${section} were invalid and have been reset`)
+      warning = STORAGE_MESSAGES.invalid
+    }
     return result.status
   }
   const statuses = Object.fromEntries(

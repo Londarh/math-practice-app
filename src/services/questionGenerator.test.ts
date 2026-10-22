@@ -6,6 +6,7 @@ import type {
 } from '../types/question'
 import { validateQuestion } from '../utils/validation'
 import {
+  FALLBACK_OPERANDS,
   QuestionGenerationError,
   createQuestion,
   generateAdditionOperands,
@@ -219,6 +220,33 @@ describe('generateQuestion: general', () => {
       expect(validateQuestion(q)).toEqual([])
     }
   })
+
+  it.each(
+    operations.flatMap((op) => levels.map((level) => [op, level] as const)),
+  )('the %s level %i fallback question is valid', (operation, level) => {
+    const [first, second] = FALLBACK_OPERANDS[operation][level]
+    const q = createQuestion({
+      operation,
+      firstOperand: first,
+      secondOperand: second,
+      difficulty: level,
+    })
+
+    expect(validateQuestion(q)).toEqual([])
+  })
+
+  it.each(operations)(
+    'uses the fallback %s question when generation keeps failing',
+    (operation) => {
+      // A broken random source (always 1) makes every attempt invalid.
+      const q = generateQuestion(operation, 2, { random: () => 1 })
+
+      expect(validateQuestion(q)).toEqual([])
+      expect([q.firstOperand, q.secondOperand]).toEqual(
+        FALLBACK_OPERANDS[operation][2],
+      )
+    },
+  )
 
   it('throws a friendly error for unsupported operations', () => {
     expect(() => generateQuestion('modulo' as MathOperation, 1)).toThrow(

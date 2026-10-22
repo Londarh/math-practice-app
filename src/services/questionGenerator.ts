@@ -12,6 +12,7 @@ import {
   randomItem,
   type RandomSource,
 } from '../utils/math'
+import { logDevError } from '../utils/devLog'
 import { validateQuestion } from '../utils/validation'
 import { buildChoices } from './answerChoices'
 import { DIFFICULTY_RULES, negativesAllowed } from './difficultyRules'
@@ -33,6 +34,20 @@ export class QuestionGenerationError extends Error {
 }
 
 type Operands = [first: number, second: number]
+
+/**
+ * Known-good operands for each operation and level, used only if random
+ * generation keeps failing validation, so practice can always go on.
+ */
+export const FALLBACK_OPERANDS: Record<
+  MathOperation,
+  Record<DifficultyLevel, Operands>
+> = {
+  addition: { 1: [2, 3], 2: [12, 15], 3: [34, 27], 4: [120, 45] },
+  subtraction: { 1: [9, 4], 2: [35, 12], 3: [72, 38], 4: [540, 125] },
+  multiplication: { 1: [3, 4], 2: [6, 7], 3: [7, 8], 4: [12, 9] },
+  division: { 1: [12, 3], 2: [42, 6], 3: [96, 8], 4: [312, 12] },
+}
 
 export function generateAdditionOperands(
   difficulty: DifficultyLevel,
@@ -187,6 +202,16 @@ export function generateQuestion(
       lastErrors = [String(error)]
     }
   }
+  logDevError(
+    `Using a fallback ${operation} question for level ${difficulty} after ${MAX_GENERATION_ATTEMPTS} failed attempts: ${lastErrors.join('; ')}`,
+  )
+  const [firstOperand, secondOperand] = FALLBACK_OPERANDS[operation][difficulty]
+  // The caller's random source may be what kept failing, so do not reuse it.
+  const fallback = createQuestion(
+    { operation, firstOperand, secondOperand, difficulty },
+    { allowNegativeSubtraction: options.allowNegativeSubtraction },
+  )
+  if (validateQuestion(fallback).length === 0) return fallback
   throw new QuestionGenerationError(
     `Could not generate a ${operation} question for level ${difficulty}: ${lastErrors.join('; ')}`,
   )

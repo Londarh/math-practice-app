@@ -108,6 +108,15 @@ describe('operation-specific distractors', () => {
 })
 
 describe('generateDistractors', () => {
+  it.each([NaN, Infinity, 2.5])(
+    'refuses a non-whole answer (%s) instead of looping forever',
+    (answer) => {
+      expect(() => generateDistractors('division', 7, 0, answer)).toThrow(
+        RangeError,
+      )
+    },
+  )
+
   it('always returns exactly three values that differ from the answer', () => {
     for (const answer of [0, 1, 2, 7, 56, 999, 5000]) {
       const distractors = generateDistractors('addition', answer, 0, answer)

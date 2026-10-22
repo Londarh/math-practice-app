@@ -109,6 +109,11 @@ export function generateDistractors(
   answer: number,
   options: ChoiceOptions = {},
 ): number[] {
+  // The fill-up loop below only ends for whole numbers (NaN never adds a
+  // new value), so refuse anything else instead of freezing the page.
+  if (!Number.isInteger(answer)) {
+    throw new RangeError(`Cannot build choices for answer ${answer}`)
+  }
   const random = options.random ?? Math.random
   const allowNegative = options.allowNegative ?? false
   const needed = CHOICE_COUNT - 1

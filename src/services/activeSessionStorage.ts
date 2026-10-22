@@ -1,4 +1,5 @@
 import type { PracticeSessionState } from '../hooks/usePracticeSession'
+import { logDevError } from '../utils/devLog'
 import {
   isPracticeAttempt,
   isPracticeSession,
@@ -95,6 +96,7 @@ export function loadActiveSession(
     if (!text) return null
     const saved = parseSavedActiveSession(JSON.parse(text))
     if (!saved) {
+      logDevError('The saved session in progress was invalid and was removed')
       clearActiveSession()
       return null
     }
