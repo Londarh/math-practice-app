@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ComponentPropsWithRef, ReactNode } from 'react'
 import { Link, type LinkProps } from 'react-router'
 import './Button.css'
 
@@ -40,7 +40,7 @@ function ButtonContent({
 }
 
 type ButtonProps = ButtonStyleProps &
-  Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'>
+  Omit<ComponentPropsWithRef<'button'>, 'children'>
 
 export function Button({
   variant = 'primary',

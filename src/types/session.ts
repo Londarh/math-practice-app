@@ -47,3 +47,10 @@ export interface PracticeSession {
   correct: number
   incorrect: number
 }
+
+/** What the practice page hands to the summary page when a session ends. */
+export interface SessionResult {
+  config: PracticeConfig
+  session: PracticeSession
+  attempts: PracticeAttempt[]
+}

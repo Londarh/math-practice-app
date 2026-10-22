@@ -1,0 +1,35 @@
+.practice-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.practice-page__status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.practice-page__details,
+.practice-page__score {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-lg);
+  margin: 0;
+  font-weight: var(--font-weight-bold);
+}
+
+.practice-page__chip {
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: 0 3px 0 var(--color-border);
+}
+
+.practice-page__end {
+  display: flex;
+  justify-content: center;
+}

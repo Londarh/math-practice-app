@@ -6,7 +6,8 @@ describe('AppRoutes', () => {
   it.each([
     ['/', 'Hi there, math explorer!'],
     ['/practice/setup', 'Practice Setup'],
-    ['/practice/session', 'Practice'],
+    // Without a chosen config, the session page sends you to setup.
+    ['/practice/session', 'Practice Setup'],
     ['/practice/summary', 'Session Summary'],
     ['/statistics', 'Statistics'],
     ['/settings', 'Settings'],
