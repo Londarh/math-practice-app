@@ -9,6 +9,7 @@ export function useAppData() {
   return {
     ...state,
     recordSessionProgress: store.recordSessionProgress,
+    resetStatistics: store.resetStatistics,
     dismissStorageWarning: store.dismissStorageWarning,
   }
 }

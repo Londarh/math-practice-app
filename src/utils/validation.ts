@@ -22,6 +22,7 @@ import type {
   SessionResult,
 } from '../types/session'
 import type { AppSettings } from '../types/settings'
+import type { AppStatistics, OperationStatistics } from '../types/statistics'
 import { ALL_DIFFICULTIES, ALL_OPERATIONS } from './labels'
 import { computeAnswer } from './math'
 
@@ -220,6 +221,56 @@ export const parseStoredAttempts = (value: unknown) =>
 
 export const parseStoredSessions = (value: unknown) =>
   parseRecordList(value, isPracticeSession)
+
+function isCounts(value: unknown): value is OperationStatistics {
+  return (
+    isRecord(value) &&
+    isCount(value.attempted) &&
+    isCount(value.correct) &&
+    isCount(value.incorrect) &&
+    Number(value.correct) + Number(value.incorrect) === value.attempted
+  )
+}
+
+/**
+ * Parses stored aggregate statistics. Totals that do not add up are treated
+ * as corrupted, so they can be rebuilt from the stored attempts.
+ */
+export function parseStatistics(value: unknown): AppStatistics | null {
+  if (!isCounts(value)) return null
+  const { byOperation, byDifficulty, reviewAttempted, reviewCorrect } =
+    value as unknown as Record<string, unknown>
+  if (!isRecord(byOperation) || !isRecord(byDifficulty)) return null
+  if (!ALL_OPERATIONS.every((op) => isCounts(byOperation[op]))) return null
+  if (!ALL_DIFFICULTIES.every((level) => isCounts(byDifficulty[level]))) {
+    return null
+  }
+  if (!isCount(reviewAttempted) || !isCount(reviewCorrect)) return null
+  if (Number(reviewCorrect) > Number(reviewAttempted)) return null
+
+  const pick = (counts: OperationStatistics): OperationStatistics => ({
+    attempted: counts.attempted,
+    correct: counts.correct,
+    incorrect: counts.incorrect,
+  })
+  return {
+    ...pick(value),
+    byOperation: Object.fromEntries(
+      ALL_OPERATIONS.map((op) => [
+        op,
+        pick(byOperation[op] as OperationStatistics),
+      ]),
+    ) as AppStatistics['byOperation'],
+    byDifficulty: Object.fromEntries(
+      ALL_DIFFICULTIES.map((level) => [
+        level,
+        pick(byDifficulty[level] as OperationStatistics),
+      ]),
+    ) as AppStatistics['byDifficulty'],
+    reviewAttempted: Number(reviewAttempted),
+    reviewCorrect: Number(reviewCorrect),
+  }
+}
 
 export function isMasteryThreshold(value: unknown): value is number {
   return (

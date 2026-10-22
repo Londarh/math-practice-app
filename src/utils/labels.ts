@@ -74,3 +74,16 @@ export function spokenQuestionText(
 ): string {
   return `${formatNumber(first)} ${OPERATION_WORDS[operation]} ${formatNumber(second)} equals what?`
 }
+
+/** A short local date and time, e.g. "Oct 21, 2026, 10:05 AM". */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+/** A short local date, e.g. "Oct 21, 2026". */
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { dateStyle: 'medium' })
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../services/defaultSettings'
+import { calculateStatistics } from '../services/statisticsService'
 import { STORAGE_KEYS } from '../services/storageService'
 import { FakeStorage } from '../test/fakeStorage'
 import { makeAttempt, makeSession } from '../test/fixtures'
@@ -10,6 +11,7 @@ import {
   MAX_STORED_ATTEMPTS,
   MAX_STORED_SESSIONS,
   recordSessionProgress,
+  resetStatistics,
   STORAGE_MESSAGES,
 } from './appStore'
 
@@ -194,5 +196,69 @@ describe('createAppStore', () => {
 
     expect(store.getState().storageWarning).toBeNull()
     expect(store.getState().attempts).toHaveLength(2)
+  })
+})
+
+describe('statistics in the store', () => {
+  it('adds each new attempt to the running totals once', () => {
+    const wrong = makeAttempt({ selfReportedCorrect: false })
+    let data = recordSessionProgress(defaultAppData(), makeSession(), [wrong])
+    data = recordSessionProgress(
+      data,
+      makeSession({ attempted: 2, correct: 1, incorrect: 1 }),
+      [wrong, makeAttempt()],
+    )
+
+    expect(data.statistics.attempted).toBe(2)
+    expect(data.statistics.correct).toBe(1)
+    expect(data.statistics.byOperation.addition.incorrect).toBe(1)
+  })
+
+  it('keeps totals correct after old attempts are dropped', () => {
+    const data = defaultAppData()
+    data.attempts = Array.from({ length: MAX_STORED_ATTEMPTS }, () =>
+      makeAttempt(),
+    )
+    data.statistics = calculateStatistics(data.attempts)
+
+    const next = recordSessionProgress(data, makeSession({ id: 'new' }), [
+      makeAttempt(),
+    ])
+
+    expect(next.attempts).toHaveLength(MAX_STORED_ATTEMPTS)
+    expect(next.statistics.attempted).toBe(MAX_STORED_ATTEMPTS + 1)
+  })
+
+  it('rebuilds missing or corrupted totals from the stored attempts', () => {
+    const attempts = [
+      makeAttempt(),
+      makeAttempt({ selfReportedCorrect: false }),
+    ]
+    const missing = new FakeStorage({ [STORAGE_KEYS.attempts]: attempts })
+    const corrupted = new FakeStorage({
+      [STORAGE_KEYS.attempts]: attempts,
+      [STORAGE_KEYS.statistics]: { attempted: 5, correct: 1, incorrect: 1 },
+    })
+
+    expect(loadAppData(missing).data.statistics).toEqual(
+      calculateStatistics(attempts),
+    )
+    expect(loadAppData(corrupted).data.statistics).toEqual(
+      calculateStatistics(attempts),
+    )
+  })
+
+  it('reset erases history and totals but keeps settings', () => {
+    let data = recordSessionProgress(defaultAppData(), makeSession(), [
+      makeAttempt(),
+    ])
+    data = { ...data, settings: { ...data.settings, defaultDifficulty: 3 } }
+
+    const reset = resetStatistics(data)
+
+    expect(reset.attempts).toEqual([])
+    expect(reset.sessions).toEqual([])
+    expect(reset.statistics.attempted).toBe(0)
+    expect(reset.settings.defaultDifficulty).toBe(3)
   })
 })

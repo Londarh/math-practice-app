@@ -12,4 +12,7 @@ export interface AppStatistics {
   incorrect: number
   byOperation: Record<MathOperation, OperationStatistics>
   byDifficulty: Record<DifficultyLevel, OperationStatistics>
+  /** Similar questions answered in mistake review, and how many were right. */
+  reviewAttempted: number
+  reviewCorrect: number
 }

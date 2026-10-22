@@ -1,5 +1,10 @@
 import { DEFAULT_SETTINGS } from '../services/defaultSettings'
 import {
+  addAttemptToStatistics,
+  calculateStatistics,
+  emptyStatistics,
+} from '../services/statisticsService'
+import {
   getStorage,
   migrateStorage,
   readSection,
@@ -7,8 +12,10 @@ import {
 } from '../services/storageService'
 import type { PracticeAttempt, PracticeSession } from '../types/session'
 import type { AppSettings } from '../types/settings'
+import type { AppStatistics } from '../types/statistics'
 import {
   parseSettings,
+  parseStatistics,
   parseStoredAttempts,
   parseStoredSessions,
 } from '../utils/validation'
@@ -22,6 +29,11 @@ export interface AppData {
   settings: AppSettings
   sessions: PracticeSession[]
   attempts: PracticeAttempt[]
+  /**
+   * Running totals. Kept separately from the attempts so the totals stay
+   * right after the oldest attempts are dropped.
+   */
+  statistics: AppStatistics
 }
 
 export interface AppState extends AppData {
@@ -31,7 +43,12 @@ export interface AppState extends AppData {
 
 type DataSection = keyof AppData
 
-const DATA_SECTIONS: DataSection[] = ['settings', 'sessions', 'attempts']
+const DATA_SECTIONS: DataSection[] = [
+  'settings',
+  'sessions',
+  'attempts',
+  'statistics',
+]
 
 const SECTION_PARSERS: {
   [K in DataSection]: (raw: unknown) => AppData[K] | null
@@ -39,6 +56,7 @@ const SECTION_PARSERS: {
   settings: parseSettings,
   sessions: parseStoredSessions,
   attempts: parseStoredAttempts,
+  statistics: parseStatistics,
 }
 
 export const STORAGE_MESSAGES = {
@@ -57,6 +75,7 @@ export function defaultAppData(): AppData {
     },
     sessions: [],
     attempts: [],
+    statistics: emptyStatistics(),
   }
 }
 
@@ -77,8 +96,16 @@ export function loadAppData(storage: Storage | null = getStorage()): {
     const result = readSection(section, SECTION_PARSERS[section], storage)
     if (result.value !== null) data[section] = result.value
     if (result.status === 'invalid') warning = STORAGE_MESSAGES.invalid
+    return result.status
   }
-  DATA_SECTIONS.forEach(load)
+  const statuses = Object.fromEntries(
+    DATA_SECTIONS.map((section) => [section, load(section)]),
+  ) as Record<DataSection, ReturnType<typeof load>>
+
+  // Missing or broken totals can be rebuilt from the attempts that are left.
+  if (statuses.statistics !== 'ok' && data.attempts.length > 0) {
+    data.statistics = calculateStatistics(data.attempts)
+  }
   return { data, warning }
 }
 
@@ -118,12 +145,27 @@ export function recordSessionProgress(
         ? data.sessions.map((s, i) => (i === index ? { ...session } : s))
         : keepNewest([...data.sessions, { ...session }], MAX_STORED_SESSIONS)
   }
-  const attempts =
-    newAttempts.length > 0
-      ? keepNewest([...data.attempts, ...newAttempts], MAX_STORED_ATTEMPTS)
-      : data.attempts
+  if (newAttempts.length === 0) return { ...data, sessions }
 
-  return { ...data, sessions, attempts }
+  return {
+    ...data,
+    sessions,
+    attempts: keepNewest(
+      [...data.attempts, ...newAttempts],
+      MAX_STORED_ATTEMPTS,
+    ),
+    statistics: newAttempts.reduce(addAttemptToStatistics, data.statistics),
+  }
+}
+
+/** Erases practice history and totals. Settings are kept. */
+export function resetStatistics(data: AppData): AppData {
+  return {
+    ...data,
+    sessions: [],
+    attempts: [],
+    statistics: emptyStatistics(),
+  }
 }
 
 export interface AppStore {
@@ -133,6 +175,7 @@ export interface AppStore {
     session: PracticeSession,
     attempts: readonly PracticeAttempt[],
   ) => void
+  resetStatistics: () => void
   dismissStorageWarning: () => void
 }
 
@@ -181,6 +224,9 @@ export function createAppStore(
     },
     recordSessionProgress(session, attempts) {
       commit(recordSessionProgress(state, session, attempts))
+    },
+    resetStatistics() {
+      commit(resetStatistics(state))
     },
     dismissStorageWarning() {
       dismissedWarning = state.storageWarning
