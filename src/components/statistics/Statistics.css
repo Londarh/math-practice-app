@@ -191,7 +191,6 @@
   font-weight: var(--font-weight-bold);
 }
 
-
 .mistake-highlights {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));

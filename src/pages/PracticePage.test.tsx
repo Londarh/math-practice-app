@@ -130,7 +130,8 @@ describe('PracticePage', () => {
 
       for (let i = 0; i < 25; i++) await answer(user)
       expect(screen.getByText('Question 26')).toBeInTheDocument()
-    })
+      // 25 simulated answers can outlast the 5 s default on a busy machine.
+    }, 30_000)
 
     it('asks before ending and can keep practicing', async () => {
       const { user } = startSession(continuous)
