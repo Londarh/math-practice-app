@@ -69,7 +69,7 @@ function makeQuestion(overrides: Partial<Question>): Question {
     secondOperand: 8,
     displayText: '7 × 8 = ?',
     correctAnswer: 56,
-    choices: [56],
+    choices: [48, 54, 56, 64],
     difficulty: 2,
     source: 'regular',
     ...overrides,
@@ -114,14 +114,19 @@ describe('validateQuestion', () => {
   })
 
   it('rejects a wrong answer', () => {
-    expect(validateQuestion(makeQuestion({ correctAnswer: 54 }))).toHaveLength(
-      1,
-    )
+    expect(
+      validateQuestion(makeQuestion({ correctAnswer: 54 })).join(),
+    ).toMatch(/is wrong/)
   })
 
   it('rejects numbers outside the level', () => {
     const errors = validateQuestion(
-      makeQuestion({ firstOperand: 12, correctAnswer: 96, difficulty: 2 }),
+      makeQuestion({
+        firstOperand: 12,
+        correctAnswer: 96,
+        choices: [96, 88, 84, 104],
+        difficulty: 2,
+      }),
     )
     expect(errors.join()).toMatch(/does not match level 2/)
   })
@@ -132,6 +137,7 @@ describe('validateQuestion', () => {
       firstOperand: 20,
       secondOperand: 50,
       correctAnswer: -30,
+      choices: [-30, -20, -31, -29],
       difficulty: 4,
     })
     expect(validateQuestion(negative)).not.toEqual([])
@@ -144,5 +150,16 @@ describe('validateQuestion', () => {
         { allowNegativeSubtraction: true },
       ),
     ).not.toEqual([])
+  })
+
+  it.each([
+    ['too few choices', [56, 48, 64]],
+    ['too many choices', [56, 48, 64, 54, 63]],
+    ['duplicate choices', [56, 48, 48, 64]],
+    ['missing correct answer', [48, 54, 63, 64]],
+    ['fractional choices', [56, 48, 54.5, 64]],
+    ['negative choices', [56, -1, 54, 64]],
+  ])('rejects %s', (_label, choices) => {
+    expect(validateQuestion(makeQuestion({ choices }))).not.toEqual([])
   })
 })

@@ -13,6 +13,7 @@ import {
   type RandomSource,
 } from '../utils/math'
 import { validateQuestion } from '../utils/validation'
+import { buildChoices } from './answerChoices'
 import { DIFFICULTY_RULES, negativesAllowed } from './difficultyRules'
 
 /** How many times to retry before giving up on a broken question. */
@@ -119,9 +120,26 @@ export interface CreateQuestionInput {
 }
 
 /** Builds a full question (text, answer, choices) from known operands. */
-export function createQuestion(input: CreateQuestionInput): Question {
+export function createQuestion(
+  input: CreateQuestionInput,
+  options: GenerateOptions = {},
+): Question {
   const { operation, firstOperand, secondOperand, difficulty } = input
   const correctAnswer = computeAnswer(operation, firstOperand, secondOperand)
+  const choices = buildChoices(
+    operation,
+    firstOperand,
+    secondOperand,
+    correctAnswer,
+    {
+      random: options.random,
+      allowNegative: negativesAllowed(
+        operation,
+        difficulty,
+        options.allowNegativeSubtraction,
+      ),
+    },
+  )
   return {
     id: createId('question'),
     operation,
@@ -129,8 +147,7 @@ export function createQuestion(input: CreateQuestionInput): Question {
     secondOperand,
     displayText: formatQuestionText(operation, firstOperand, secondOperand),
     correctAnswer,
-    // Plausible wrong answers are added in Phase 5.
-    choices: [correctAnswer],
+    choices,
     difficulty,
     source: input.source ?? 'regular',
     ...(input.mistakePatternId && { mistakePatternId: input.mistakePatternId }),
@@ -158,12 +175,10 @@ export function generateQuestion(
         random,
         allowNegative,
       )
-      const question = createQuestion({
-        operation,
-        firstOperand,
-        secondOperand,
-        difficulty,
-      })
+      const question = createQuestion(
+        { operation, firstOperand, secondOperand, difficulty },
+        options,
+      )
       lastErrors = validateQuestion(question, {
         allowNegativeSubtraction: allowNegative,
       })

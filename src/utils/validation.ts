@@ -1,4 +1,8 @@
-import { matchesDifficulty } from '../services/difficultyRules'
+import { CHOICE_COUNT } from '../services/answerChoices'
+import {
+  matchesDifficulty,
+  negativesAllowed,
+} from '../services/difficultyRules'
 import type {
   DifficultyLevel,
   MathOperation,
@@ -119,6 +123,30 @@ export function validateQuestion(
     )
   ) {
     errors.push(`${question.displayText} does not match level ${difficulty}`)
+  }
+
+  const { choices } = question
+  if (choices.length !== CHOICE_COUNT) {
+    errors.push(`Expected ${CHOICE_COUNT} choices, got ${choices.length}`)
+  }
+  if (new Set(choices).size !== choices.length) {
+    errors.push('Answer choices are not unique')
+  }
+  if (choices.filter((choice) => choice === correctAnswer).length !== 1) {
+    errors.push('The correct answer must appear exactly once')
+  }
+  if (!choices.every(Number.isInteger)) {
+    errors.push('Answer choices must be whole numbers')
+  }
+  if (
+    !negativesAllowed(
+      operation,
+      difficulty,
+      options.allowNegativeSubtraction,
+    ) &&
+    choices.some((choice) => choice < 0)
+  ) {
+    errors.push('Negative answer choices are not allowed at this level')
   }
   return errors
 }
