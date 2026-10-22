@@ -2,7 +2,12 @@ import type { Question } from '../types/question'
 import { formatNumber, OPERATION_SYMBOLS } from './labels'
 
 /** The finished equation, e.g. "7 × 8 = 56". */
-export function formatEquation(question: Question): string {
+export function formatEquation(
+  question: Pick<
+    Question,
+    'operation' | 'firstOperand' | 'secondOperand' | 'correctAnswer'
+  >,
+): string {
   const { operation, firstOperand, secondOperand, correctAnswer } = question
   return `${formatNumber(firstOperand)} ${OPERATION_SYMBOLS[operation]} ${formatNumber(secondOperand)} = ${formatNumber(correctAnswer)}`
 }

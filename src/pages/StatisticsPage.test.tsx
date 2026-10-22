@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { calculateStatistics } from '../services/statisticsService'
 import { STORAGE_KEYS } from '../services/storageService'
-import { makeAttempt, makeSession } from '../test/fixtures'
+import { makeAttempt, makePattern, makeSession } from '../test/fixtures'
 import { renderAppAt } from '../test/renderWithRouter'
 
 const attempts = [
@@ -174,5 +174,116 @@ describe('StatisticsPage', () => {
     expect(
       value(section('All practice'), 'Questions attempted'),
     ).toHaveTextContent('4')
+  })
+})
+
+describe('StatisticsPage mistake review', () => {
+  function seedMistakes() {
+    localStorage.setItem(
+      STORAGE_KEYS.mistakePatterns,
+      JSON.stringify([
+        makePattern({
+          incorrectCount: 3,
+          similarCorrectCount: 1,
+          lastIncorrectAt: '2026-10-19T10:00:00.000Z',
+        }),
+        makePattern({
+          operation: 'division',
+          firstOperand: 56,
+          secondOperand: 7,
+          correctAnswer: 8,
+          incorrectCount: 1,
+        }),
+        makePattern({
+          operation: 'addition',
+          firstOperand: 9,
+          secondOperand: 6,
+          correctAnswer: 15,
+          incorrectCount: 2,
+          similarCorrectCount: 3,
+          mastered: true,
+        }),
+      ]),
+    )
+  }
+
+  it('shows an empty state when there are no mistakes', () => {
+    seed()
+    renderAppAt('/statistics')
+
+    expect(
+      section('Mistake review').getByText(/No mistakes saved yet/),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('region', { name: 'Mistakes to practice' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows mistake totals, the most missed operation and facts', () => {
+    seed()
+    seedMistakes()
+    renderAppAt('/statistics')
+    const mistakes = section('Mistake review')
+
+    expect(value(mistakes, 'Mistakes to practice')).toHaveTextContent('2')
+    expect(value(mistakes, 'Mistakes mastered')).toHaveTextContent('1')
+    expect(value(mistakes, 'Similar questions practiced')).toHaveTextContent(
+      '0',
+    )
+    expect(mistakes.getByText('Multiplication')).toBeInTheDocument()
+    expect(mistakes.getByText('Missed 3 times')).toBeInTheDocument()
+
+    const facts = mistakes.getAllByRole('listitem')
+    expect(facts.map((li) => li.textContent)).toEqual([
+      '8 × 7 = 56missed 3 times',
+      '9 + 6 = 15missed 2 times',
+      '56 ÷ 7 = 8missed 1 time',
+    ])
+  })
+
+  it('lists active mistakes with progress, and mastered ones separately', async () => {
+    seed()
+    seedMistakes()
+    const { user } = renderAppAt('/statistics')
+    const details = section('Mistakes to practice')
+
+    const active = within(
+      details.getByRole('list', { name: 'Mistakes to practice' }),
+    ).getAllByRole('listitem')
+    expect(active).toHaveLength(2)
+    expect(active[0]).toHaveTextContent('8 × 7 = 56')
+    expect(active[0]).toHaveTextContent('Times missed3')
+    expect(active[0]).toHaveTextContent('Oct 19, 2026')
+    expect(
+      within(active[0]).getByRole('progressbar', {
+        name: 'Mastery progress for 8 × 7 = 56',
+      }),
+    ).toHaveAttribute('aria-valuetext', '1 of 3 similar questions right')
+
+    const mastered = details.getByText('Mastered mistakes (1)')
+    expect(
+      details.getByRole('list', { name: 'Mastered mistakes' }),
+    ).not.toBeVisible()
+    await user.click(mastered)
+    const masteredList = details.getByRole('list', {
+      name: 'Mastered mistakes',
+    })
+    expect(masteredList).toBeVisible()
+    expect(masteredList).toHaveTextContent('9 + 6 = 15')
+    expect(masteredList).toHaveTextContent('Mastered!')
+  })
+
+  it('keeps showing saved mistakes after statistics are reset', async () => {
+    seed()
+    seedMistakes()
+    const { user } = renderAppAt('/statistics')
+
+    await user.click(screen.getByRole('button', { name: 'Reset Statistics' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, erase it' }))
+
+    expect(screen.getByText('No practice yet')).toBeInTheDocument()
+    expect(
+      value(section('Mistake review'), 'Mistakes to practice'),
+    ).toHaveTextContent('2')
   })
 })

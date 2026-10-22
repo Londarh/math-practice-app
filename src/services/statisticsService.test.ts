@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { makeAttempt, makeSession } from '../test/fixtures'
+import { makeAttempt, makePattern, makeSession } from '../test/fixtures'
+import type { MistakePattern } from '../types/mistake'
+import { computeAnswer } from '../utils/math'
 import {
   accuracyOf,
   addAttemptToStatistics,
   calculateStatistics,
   emptyStatistics,
+  mostMissedOperations,
   recentSessions,
+  sortByIncorrectCount,
+  summarizeMistakes,
 } from './statisticsService'
 
 describe('calculateStatistics', () => {
@@ -133,5 +138,102 @@ describe('recentSessions', () => {
       'old',
     ])
     expect(recentSessions(sessions, 1).map((s) => s.id)).toEqual(['new'])
+  })
+})
+
+describe('mistake statistics', () => {
+  const fact = (
+    operation: MistakePattern['operation'],
+    first: number,
+    second: number,
+    overrides: Partial<MistakePattern> = {},
+  ) =>
+    makePattern({
+      operation,
+      firstOperand: first,
+      secondOperand: second,
+      correctAnswer: computeAnswer(operation, first, second),
+      ...overrides,
+    })
+
+  it('sorts mistakes by how often they were missed', () => {
+    const once = fact('addition', 2, 3, { incorrectCount: 1 })
+    const often = fact('division', 56, 7, { incorrectCount: 5 })
+    const twice = fact('subtraction', 9, 4, { incorrectCount: 2 })
+
+    expect(sortByIncorrectCount([once, often, twice])).toEqual([
+      often,
+      twice,
+      once,
+    ])
+  })
+
+  it('breaks ties by the most recent miss, then by a fixed order', () => {
+    const older = fact('addition', 2, 3, {
+      incorrectCount: 2,
+      lastIncorrectAt: '2026-10-01T10:00:00.000Z',
+    })
+    const newer = fact('addition', 4, 4, {
+      incorrectCount: 2,
+      lastIncorrectAt: '2026-10-20T10:00:00.000Z',
+    })
+    const sameTimeA = fact('addition', 1, 1, { incorrectCount: 1 })
+    const sameTimeB = fact('addition', 1, 2, { incorrectCount: 1 })
+
+    expect(sortByIncorrectCount([older, newer])).toEqual([newer, older])
+    expect(sortByIncorrectCount([sameTimeB, sameTimeA])).toEqual(
+      sortByIncorrectCount([sameTimeA, sameTimeB]),
+    )
+  })
+
+  it('finds the most frequently missed operation', () => {
+    const result = mostMissedOperations([
+      fact('multiplication', 8, 7, { incorrectCount: 2 }),
+      fact('multiplication', 6, 7, { incorrectCount: 2 }),
+      fact('addition', 2, 3, { incorrectCount: 3 }),
+    ])
+
+    expect(result).toEqual({ operations: ['multiplication'], misses: 4 })
+  })
+
+  it('returns every operation that is tied for most missed', () => {
+    const result = mostMissedOperations([
+      fact('division', 56, 7, { incorrectCount: 2 }),
+      fact('subtraction', 9, 4, { incorrectCount: 2 }),
+    ])
+
+    expect(result).toEqual({
+      operations: ['subtraction', 'division'],
+      misses: 2,
+    })
+  })
+
+  it('reports nothing when there are no mistakes', () => {
+    expect(mostMissedOperations([])).toEqual({ operations: [], misses: 0 })
+    const summary = summarizeMistakes([], emptyStatistics())
+    expect(summary.active).toEqual([])
+    expect(summary.mastered).toEqual([])
+    expect(summary.frequentFacts).toEqual([])
+  })
+
+  it('summarizes active, mastered and review counts', () => {
+    const active = fact('addition', 2, 3, { incorrectCount: 4 })
+    const mastered = fact('addition', 5, 5, {
+      mastered: true,
+      similarCorrectCount: 3,
+    })
+    const stats = calculateStatistics([
+      makeAttempt({ source: 'mistake-review' }),
+      makeAttempt({ source: 'mistake-review', selfReportedCorrect: false }),
+      makeAttempt(),
+    ])
+
+    const summary = summarizeMistakes([mastered, active], stats, 1)
+
+    expect(summary.active).toEqual([active])
+    expect(summary.mastered).toEqual([mastered])
+    expect(summary.similarPracticed).toBe(2)
+    expect(summary.reviewCorrect).toBe(1)
+    expect(summary.frequentFacts).toEqual([active])
   })
 })

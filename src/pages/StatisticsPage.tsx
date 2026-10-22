@@ -4,6 +4,8 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { EmptyState } from '../components/common/EmptyState'
 import { PageContainer } from '../components/layout/PageContainer'
 import { DifficultyStatistics } from '../components/statistics/DifficultyStatistics'
+import { MistakeDetails } from '../components/statistics/MistakeDetails'
+import { MistakeStatistics } from '../components/statistics/MistakeStatistics'
 import { OperationStatistics } from '../components/statistics/OperationStatistics'
 import { RecentSessions } from '../components/statistics/RecentSessions'
 import { StatisticsOverview } from '../components/statistics/StatisticsOverview'
@@ -14,8 +16,16 @@ const RESET_CONFIRMATION =
   'Are you sure you want to erase all practice history and statistics?'
 
 export function StatisticsPage() {
-  const { statistics, recentSessions, hasPractice, resetStatistics } =
-    useStatistics()
+  const {
+    statistics,
+    recentSessions,
+    mistakes,
+    masteryThreshold,
+    hasPractice,
+    resetStatistics,
+  } = useStatistics()
+  // Saved mistakes outlive a statistics reset, so show them either way.
+  const hasMistakes = mistakes.active.length + mistakes.mastered.length > 0
   const [confirmingReset, setConfirmingReset] = useState(false)
   const [resetDone, setResetDone] = useState(false)
 
@@ -43,6 +53,17 @@ export function StatisticsPage() {
             <StatisticsOverview statistics={statistics} />
             <OperationStatistics statistics={statistics} />
             <DifficultyStatistics statistics={statistics} />
+          </>
+        )}
+
+        {(hasPractice || hasMistakes) && (
+          <>
+            <MistakeStatistics summary={mistakes} />
+            <MistakeDetails
+              active={mistakes.active}
+              mastered={mistakes.mastered}
+              masteryThreshold={masteryThreshold}
+            />
           </>
         )}
 
