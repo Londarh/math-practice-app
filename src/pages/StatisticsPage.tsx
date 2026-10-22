@@ -65,7 +65,7 @@ export function StatisticsPage() {
       <ConfirmDialog
         open={confirmingReset}
         title="Reset statistics?"
-        message={`${RESET_CONFIRMATION} Your settings will stay the same.`}
+        message={`${RESET_CONFIRMATION} Your settings and saved mistakes to practice will stay.`}
         confirmLabel="Yes, erase it"
         cancelLabel="No, keep it"
         onConfirm={() => {

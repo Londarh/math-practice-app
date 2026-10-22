@@ -21,6 +21,7 @@ import type {
   SessionLength,
   SessionResult,
 } from '../types/session'
+import type { MistakePattern } from '../types/mistake'
 import type { AppSettings } from '../types/settings'
 import type { AppStatistics, OperationStatistics } from '../types/statistics'
 import { ALL_DIFFICULTIES, ALL_OPERATIONS } from './labels'
@@ -221,6 +222,34 @@ export const parseStoredAttempts = (value: unknown) =>
 
 export const parseStoredSessions = (value: unknown) =>
   parseRecordList(value, isPracticeSession)
+
+export function isMistakePattern(value: unknown): value is MistakePattern {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    !isMathOperation(value.operation) ||
+    !Number.isInteger(value.firstOperand) ||
+    !Number.isInteger(value.secondOperand) ||
+    !isDifficultyLevel(value.difficulty) ||
+    !isCount(value.incorrectCount) ||
+    Number(value.incorrectCount) < 1 ||
+    !isCount(value.similarCorrectCount) ||
+    !isTimestamp(value.lastIncorrectAt) ||
+    typeof value.mastered !== 'boolean'
+  ) {
+    return false
+  }
+  // The stored answer must really be the answer, e.g. no division by zero.
+  const answer = computeAnswer(
+    value.operation,
+    Number(value.firstOperand),
+    Number(value.secondOperand),
+  )
+  return Number.isInteger(answer) && value.correctAnswer === answer
+}
+
+export const parseStoredMistakePatterns = (value: unknown) =>
+  parseRecordList(value, isMistakePattern)
 
 function isCounts(value: unknown): value is OperationStatistics {
   return (

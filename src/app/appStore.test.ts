@@ -312,3 +312,75 @@ describe('settings in the store', () => {
     expect(storage.getItem('other.key')).toBe('x')
   })
 })
+
+describe('mistake patterns in the store', () => {
+  const wrong = () =>
+    makeAttempt({
+      operation: 'multiplication',
+      firstOperand: 8,
+      secondOperand: 7,
+      correctAnswer: 56,
+      selfReportedCorrect: false,
+    })
+
+  it('creates patterns from incorrect answers and saves them', () => {
+    const storage = new FakeStorage()
+    createAppStore(storage).recordSessionProgress(
+      makeSession({ attempted: 2, correct: 1, incorrect: 1 }),
+      [wrong(), makeAttempt()],
+    )
+
+    const patterns = createAppStore(storage).getState().mistakePatterns
+    expect(patterns).toHaveLength(1)
+    expect(patterns[0]).toMatchObject({
+      operation: 'multiplication',
+      firstOperand: 8,
+      secondOperand: 7,
+      incorrectCount: 1,
+    })
+  })
+
+  it('drops invalid stored pattern records and keeps the good ones', () => {
+    const data = recordSessionProgress(defaultAppData(), makeSession(), [
+      wrong(),
+    ])
+    const storage = new FakeStorage({
+      [STORAGE_KEYS.mistakePatterns]: [
+        data.mistakePatterns[0],
+        { ...data.mistakePatterns[0], id: 'bad', correctAnswer: 55 },
+        {
+          ...data.mistakePatterns[0],
+          id: 'zero',
+          operation: 'division',
+          secondOperand: 0,
+        },
+        'nonsense',
+      ],
+    })
+
+    expect(loadAppData(storage).data.mistakePatterns).toEqual(
+      data.mistakePatterns,
+    )
+  })
+
+  it('resets a pattern section that is not a list', () => {
+    const storage = new FakeStorage({
+      [STORAGE_KEYS.mistakePatterns]: { oops: true },
+      [STORAGE_KEYS.settings]: { defaultDifficulty: 2 },
+    })
+
+    const { data, warning } = loadAppData(storage)
+
+    expect(data.mistakePatterns).toEqual([])
+    expect(data.settings.defaultDifficulty).toBe(2)
+    expect(warning).toBe(STORAGE_MESSAGES.invalid)
+  })
+
+  it('keeps patterns when statistics are reset', () => {
+    const data = recordSessionProgress(defaultAppData(), makeSession(), [
+      wrong(),
+    ])
+
+    expect(resetStatistics(data).mistakePatterns).toEqual(data.mistakePatterns)
+  })
+})

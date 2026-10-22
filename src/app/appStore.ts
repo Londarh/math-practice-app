@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS } from '../services/defaultSettings'
+import { applyAttemptToPatterns } from '../services/mistakeService'
 import {
   addAttemptToStatistics,
   calculateStatistics,
@@ -11,6 +12,7 @@ import {
   readSection,
   writeSection,
 } from '../services/storageService'
+import type { MistakePattern } from '../types/mistake'
 import type { PracticeAttempt, PracticeSession } from '../types/session'
 import type { AppSettings } from '../types/settings'
 import type { AppStatistics } from '../types/statistics'
@@ -18,6 +20,7 @@ import {
   parseSettings,
   parseStatistics,
   parseStoredAttempts,
+  parseStoredMistakePatterns,
   parseStoredSessions,
 } from '../utils/validation'
 
@@ -35,6 +38,8 @@ export interface AppData {
    * right after the oldest attempts are dropped.
    */
   statistics: AppStatistics
+  /** Facts the student got wrong, used for mistake review. */
+  mistakePatterns: MistakePattern[]
 }
 
 export interface AppState extends AppData {
@@ -49,6 +54,7 @@ const DATA_SECTIONS: DataSection[] = [
   'sessions',
   'attempts',
   'statistics',
+  'mistakePatterns',
 ]
 
 const SECTION_PARSERS: {
@@ -58,6 +64,7 @@ const SECTION_PARSERS: {
   sessions: parseStoredSessions,
   attempts: parseStoredAttempts,
   statistics: parseStatistics,
+  mistakePatterns: parseStoredMistakePatterns,
 }
 
 export const STORAGE_MESSAGES = {
@@ -77,6 +84,7 @@ export function defaultAppData(): AppData {
     sessions: [],
     attempts: [],
     statistics: emptyStatistics(),
+    mistakePatterns: [],
   }
 }
 
@@ -156,10 +164,17 @@ export function recordSessionProgress(
       MAX_STORED_ATTEMPTS,
     ),
     statistics: newAttempts.reduce(addAttemptToStatistics, data.statistics),
+    mistakePatterns: newAttempts.reduce(
+      applyAttemptToPatterns,
+      data.mistakePatterns,
+    ),
   }
 }
 
-/** Erases practice history and totals. Settings are kept. */
+/**
+ * Erases practice history and totals. Settings are kept, and so are the saved
+ * mistakes, so the student can still review them.
+ */
 export function resetStatistics(data: AppData): AppData {
   return {
     ...data,
